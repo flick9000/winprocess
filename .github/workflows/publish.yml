@@ -28,7 +28,7 @@ jobs:
             - name: Rust cache
               uses: swatinem/rust-cache@v2
               with:
-                  workspaces: ./app/src-tauri
+                  workspaces: ./src-tauri
                   shared-key: release
                   save-if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -36,10 +36,8 @@ jobs:
               with:
                   node-version: lts/*
                   cache: npm
-                  cache-dependency-path: app/package-lock.json
 
             - name: Install frontend dependencies
-              working-directory: ./
               run: npm ci
 
             - uses: tauri-apps/tauri-action@v1
