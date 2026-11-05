@@ -1,8 +1,8 @@
 # WinProcess
 
-[![Release](https://img.shields.io/github/v/release/flick9000/winprocess)](https://github.com/flick9000/winprocess/releases/latest)
-[![Stars](https://img.shields.io/github/stars/flick9000/winprocess?style=flat)](https://github.com/flick9000/winprocess/stargazers)
-[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
+<a href="https://github.com/flick9000/winprocess/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/release/flick9000/winprocess.svg?variant=outline&amp;size=sm&amp;mode=dark"><img alt="GitHub Release" src="https://www.shieldcn.dev/github/release/flick9000/winprocess.svg?variant=outline&amp;size=sm&amp;mode=light"></picture></a>
+<a href="https://github.com/sponsors/flick9000"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=dark"><img alt="GitHub Sponsors" src="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=light"></picture></a>
+<a href="https://ko-fi.com/flick9000"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Ko--fi-sponsor.svg?logo=kofi&amp;variant=outline&amp;size=sm&amp;mode=dark"><img alt="Ko-fi" src="https://www.shieldcn.dev/badge/Ko--fi-sponsor.svg?logo=kofi&amp;variant=outline&amp;size=sm&amp;mode=light"></picture></a>
 
 **Process management, system optimization, and task management in one lightweight Windows app.**
 
