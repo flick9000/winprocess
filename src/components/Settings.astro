@@ -1,0 +1,235 @@
+---
+import Select from "../components/Select.astro";
+import { Rocket, Timer, RotateCw, Coffee, Globe } from "@lucide/astro";
+
+const pollings = [
+    { value: "1", label: "1s" },
+    { value: "2", label: "2s" },
+    { value: "3", label: "3s" },
+    { value: "5", label: "5s" },
+    { value: "10", label: "10s" },
+];
+---
+
+<div id="settings">
+    <div class="setting">
+        <div class="setting-left">
+            <Rocket size="20" />
+            <div>
+                <h1>Launch at startup</h1>
+                <p>Allows the app to run at Windows startup.</p>
+            </div>
+        </div>
+        <label class="switch">
+            <input class="checkbox-core" id="launchAtStartup" type="checkbox" />
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="setting">
+        <div class="setting-left">
+            <Timer size="20" />
+            <div>
+                <h1>Polling rate</h1>
+                <p>Sets how often the app checks for changes in processes.</p>
+            </div>
+        </div>
+        <Select
+            id="polling"
+            name="Polling rate"
+            options={pollings}
+            defaultValue="2"
+        />
+    </div>
+    <div class="setting">
+        <div class="setting-left">
+            <RotateCw size="20" />
+            <div>
+                <h1>Reset settings</h1>
+                <p>Resets all settings and rules to their default values.</p>
+            </div>
+        </div>
+        <button id="resetButton">Reset</button>
+    </div>
+    <div class="setting">
+        <div class="setting-left">
+            <Coffee size="20" />
+            <div>
+                <h1>Buy me a coffee</h1>
+                <p>Your support helps me improve WinProcess.</p>
+            </div>
+        </div>
+        <a href="https://ko-fi.com/flick9000" target="_blank">
+            <button>Support</button>
+        </a>
+    </div>
+    <div class="setting">
+        <div class="setting-left">
+            <Globe size="20" />
+            <h1>Visit website</h1>
+        </div>
+        <a href="https://winprocess.app" target="_blank">
+            <button>Visit</button>
+        </a>
+    </div>
+</div>
+
+<script>
+    import { LazyStore } from "@tauri-apps/plugin-store";
+    import { invoke } from "@tauri-apps/api/core";
+
+    const settings = new LazyStore("settings.json");
+    const always = new LazyStore("always.json");
+
+    async function initPollingSetting() {
+        const hiddenInput = document.getElementById(
+            "polling",
+        ) as HTMLInputElement | null;
+        if (!hiddenInput) return;
+
+        const container = hiddenInput.closest(".custom-select-container");
+        if (!container) return;
+
+        const selectedValueEl = container.querySelector(".selected-value");
+        const options = container.querySelectorAll(".select-option");
+
+        const savedValue: number | undefined = await settings.get("polling");
+
+        if (savedValue) {
+            const formattedValue = (savedValue / 1000).toString();
+
+            const targetOption = Array.from(options).find(
+                (opt) => opt.getAttribute("data-value") === formattedValue,
+            );
+
+            if (!targetOption) return;
+
+            const label =
+                targetOption.querySelector("span")?.textContent?.trim() || "";
+
+            hiddenInput.value = formattedValue;
+
+            if (selectedValueEl) {
+                selectedValueEl.textContent = label;
+            }
+
+            options.forEach((opt) => {
+                const isTarget = opt === targetOption;
+                opt.setAttribute("aria-selected", isTarget ? "true" : "false");
+                opt.classList.toggle("selected", isTarget);
+            });
+
+            // @ts-ignore
+            globalThis.pollingRate = savedValue;
+        } else {
+            // @ts-ignore
+            globalThis.pollingRate = parseInt(hiddenInput.value, 10) * 1000;
+        }
+
+        hiddenInput.addEventListener("change", async () => {
+            const newRate = parseInt(hiddenInput.value, 10) * 1000;
+            // @ts-ignore
+            globalThis.pollingRate = newRate;
+            await settings.set("polling", newRate);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        initPollingSetting();
+
+        const isStartupEnabled = await invoke("is_autostart_enabled");
+        const checkbox = document.getElementById(
+            "launchAtStartup",
+        ) as HTMLInputElement;
+
+        if (isStartupEnabled === true) {
+            checkbox.checked = true;
+        }
+
+        checkbox.addEventListener("change", async () => {
+            if (checkbox.checked) {
+                await invoke("enable_autostart");
+                await settings.set("startup", true);
+            } else {
+                await invoke("disable_autostart");
+                await settings.set("startup", false);
+            }
+        });
+
+        const resetButton = document.getElementById("resetButton");
+        resetButton?.addEventListener("click", async () => {
+            const tabs = document.querySelectorAll(".sidebar-entry");
+            await settings.clear();
+            await always.clear();
+            (tabs[0] as HTMLButtonElement).click();
+        });
+    });
+</script>
+
+<style>
+    #settings {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-block: 0.5rem;
+        min-height: 500px;
+        max-height: calc(100vh - 152px);
+    }
+    .setting {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-inline: 1rem;
+        height: 64px;
+        border-radius: 5px;
+        border: 1px solid var(--border);
+    }
+    .setting-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .setting img {
+        width: 20px;
+        height: 20px;
+        max-width: 100%;
+    }
+    .setting-left div {
+        display: flex;
+        flex-direction: column;
+    }
+    .setting h1 {
+        color: var(--text);
+        font-weight: 400;
+    }
+    .setting p {
+        color: var(--muted);
+        font-size: var(--font-sm);
+    }
+    #launchAtStartup {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    #launchAtStartup::before {
+        margin-top: 2px;
+    }
+    #launchAtStartup:hover {
+        background-color: var(--hover);
+    }
+    .setting button {
+        background: var(--elevated);
+        border: 1px solid var(--border);
+        min-width: 120px;
+        min-height: 32px;
+        border-radius: 5px;
+        color: var(--text);
+        cursor: pointer;
+        &:active {
+            animation: press 0.3s ease-in-out;
+        }
+        &:hover {
+            background-color: var(--hover);
+        }
+    }
+</style>

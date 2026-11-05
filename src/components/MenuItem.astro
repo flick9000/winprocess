@@ -1,0 +1,131 @@
+---
+import type { AstroComponent } from "@lucide/astro";
+
+interface Item {
+    label: string;
+    id: string;
+    type: string;
+}
+
+export interface Props {
+    label: string;
+    icon?: AstroComponent;
+    id?: string;
+    containerClass?: string;
+    dropdown: boolean;
+    onlyLevel?: boolean;
+    disabled?: boolean;
+    items?: Item[];
+}
+
+const {
+    label,
+    icon: Icon,
+    id,
+    dropdown,
+    containerClass,
+    onlyLevel,
+    disabled,
+    items,
+} = Astro.props;
+---
+
+<div
+    class=`menu-item ${containerClass ? containerClass : ""} has-dropdown ${disabled ? "disabled" : ""}`
+>
+    {Icon && <Icon size={16} />}
+    <button id={id}>{label}</button>
+
+    <ul
+        style=`display: ${onlyLevel ? "block" : "none"}`
+        class="menu-list nest always"
+    >
+        {items?.map((item) => {
+            if (!onlyLevel) return;
+            return (
+                <li class="menu-item">
+                    <button
+                        class="nested-button"
+                        data-type={item.type}
+                        data-value={item.id}
+                    >
+                        {item.label}
+                    </button>
+                    <div class="checked">
+                        <img
+                            width="16"
+                            height="16"
+                            data-type={item.type}
+                            src="/check.svg"
+                            alt=""
+                        />
+                    </div>
+                </li>
+            );
+        })}
+    </ul>
+
+    <ul
+        style=`display: ${dropdown && !onlyLevel ? "block" : "none"}`
+        class="menu-list nest"
+    >
+        <li class=`menu-item ${dropdown ? "has-dropdown" : ""}`>
+            <button aria-haspopup="true" aria-expanded="false">
+                Current ->
+            </button>
+
+            <ul class="menu-list nest current">
+                {items?.map((item) => (
+                    <li class="menu-item">
+                        <button
+                            class="nested-button"
+                            data-type={item.type}
+                            data-value={item.id}
+                        >
+                            {item.label}
+                        </button>
+                        <div class="checked">
+                            <img
+                                width="16"
+                                height="16"
+                                data-type={item.type}
+                                src="/check.svg"
+                                alt=""
+                            />
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </li>
+
+        <li class="menu-item has-dropdown">
+            <button aria-haspopup="true" aria-expanded="false">
+                Always ->
+            </button>
+
+            <ul class="menu-list nest always">
+                {items?.map((item) => (
+                    <li class="menu-item">
+                        <button
+                            class="nested-button"
+                            data-type={item.type}
+                            data-value={item.id}
+                        >
+                            {item.label}
+                        </button>
+                        <div class="checked">
+                            <img
+                                width="16"
+                                height="16"
+                                data-type={item.type}
+                                src="/check.svg"
+                                alt=""
+                            />
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </li>
+    </ul>
+    <span class="nested-icon">{dropdown ? "->" : ""}</span>
+</div>

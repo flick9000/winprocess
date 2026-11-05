@@ -1,0 +1,162 @@
+---
+import {
+    LucideArrowLeftToLine,
+    Cpu,
+    ScrollText,
+    ListStart,
+    ClipboardClock,
+    Settings,
+} from "@lucide/astro";
+---
+
+<div class="sidebar" id="sidebar">
+    <div class="header">
+        <div>
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="1em"
+                height="1em"
+                viewBox="0 0 24 24"
+            >
+                <path d="M0 0h24v24H0z" fill="none"></path>
+                <path
+                    fill="currentColor"
+                    d="M9 15V9h6v6zm0 6v-2H7q-.825 0-1.412-.587T5 17v-2H3v-2h2v-2H3V9h2V7q0-.825.588-1.412T7 5h2V3h2v2h2V3h2v2h2q.825 0 1.413.588T19 7v2h2v2h-2v2h2v2h-2v2q0 .825-.587 1.413T17 19h-2v2h-2v-2h-2v2zm8-4V7H7v10z"
+                ></path>
+            </svg>
+            <h1>WinProcess</h1>
+        </div>
+        <a class="collapse">
+            <LucideArrowLeftToLine size="20" />
+        </a>
+    </div>
+    <div class="sidebar-content">
+        <hr />
+        <div data-tab="processes-tab" class="sidebar-entry">
+            <Cpu size="24" />
+            <h1>Processes</h1>
+        </div>
+        <div data-tab="rules-tab" class="sidebar-entry">
+            <ScrollText size="24" />
+            <h1>Rules</h1>
+        </div>
+        <div data-tab="autoruns-tab" class="sidebar-entry">
+            <ListStart size="24" />
+            <h1>Autoruns</h1>
+        </div>
+        <div data-tab="tasks-tab" class="sidebar-entry">
+            <ClipboardClock size="24" />
+            <h1>Tasks</h1>
+        </div>
+    </div>
+    <div class="sidebar-footer">
+        <hr />
+        <div data-tab="settings-tab" class="sidebar-entry">
+            <Settings size="24" />
+            <h1>Settings</h1>
+        </div>
+    </div>
+</div>
+
+<style>
+    * {
+        transition: none;
+    }
+
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        width: 225px;
+        height: calc(100% - 32px);
+        padding: 1rem;
+        padding-top: 1.5rem;
+        background-color: var(--elevated);
+        position: fixed;
+        top: 0;
+        left: 0;
+        border-right: 1px solid var(--border);
+    }
+
+    .collapse {
+        padding: 0.5rem;
+        cursor: pointer;
+    }
+
+    .sidebar.collapsed {
+        width: 70px;
+    }
+
+    .sidebar.collapsed .header {
+        justify-content: center;
+        gap: 0;
+    }
+
+    .sidebar.collapsed h1,
+    .sidebar.collapsed .header div svg {
+        display: none;
+    }
+
+    .sidebar.collapsed .sidebar-entry {
+        justify-content: center;
+    }
+
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+
+        div {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        div > svg {
+            width: 32px;
+            height: 32px;
+        }
+        h1 {
+            color: var(--text);
+        }
+    }
+
+    #version {
+        font-size: var(--font-sm);
+        color: var(--muted);
+    }
+
+    .sidebar-content {
+        display: flex;
+        flex-direction: column;
+        margin-top: 1rem;
+        gap: 0.5rem;
+    }
+
+    .sidebar-entry {
+        display: flex;
+        height: 40px;
+        align-items: center;
+        padding: 0.5rem;
+        border-radius: 5px;
+        gap: 0.5rem;
+
+        svg {
+            max-width: 16px;
+        }
+        h1 {
+            font-weight: 400;
+        }
+    }
+
+    .sidebar-entry.active {
+        background-color: var(--active);
+    }
+
+    .sidebar-entry:hover {
+        background-color: var(--active);
+    }
+
+    .sidebar-footer {
+        margin-top: auto;
+    }
+</style>

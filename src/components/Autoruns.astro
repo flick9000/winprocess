@@ -1,0 +1,357 @@
+---
+import MenuItem from "./MenuItem.astro";
+import TableHead from "./TableHead.astro";
+
+import { ToggleRight, Trash, Box, Folder, Tag } from "@lucide/astro";
+
+const tableHeader = [
+    { dataSort: "name", text: "Name" },
+    { dataSort: "source", text: "Source" },
+    { dataSort: "command", text: "Command" },
+    { dataSort: "enabled", text: "State" },
+];
+---
+
+<div id="startup-list">
+    <TableHead tableClass="startup-table" Items={tableHeader}>
+        <tbody id="startup-rows"></tbody>
+    </TableHead>
+</div>
+
+<div id="startupMenu" class="menu">
+    <MenuItem id="startupName" label="Name:" disabled dropdown={false} />
+    <MenuItem
+        icon={ToggleRight}
+        id="toggleStartup"
+        label="Enable"
+        dropdown={false}
+    />
+    <MenuItem icon={Trash} id="deleteStartup" label="Delete" dropdown={false} />
+    <hr />
+    <MenuItem
+        icon={Box}
+        id="locateRegistry"
+        label="Locate Registry"
+        dropdown={false}
+    />
+    <MenuItem
+        icon={Folder}
+        id="locatePath"
+        label="Locate Path"
+        dropdown={false}
+    />
+    <MenuItem
+        icon={Tag}
+        id="openProperties"
+        label="Properties"
+        dropdown={false}
+    />
+</div>
+
+<script>
+    import { invoke } from "@tauri-apps/api/core";
+    import { Command } from "@tauri-apps/plugin-shell";
+    import {
+        powershellArgs,
+        toggleStartupEntry,
+        regDel,
+    } from "../utils/scripts";
+    import { updateSortIndicators } from "../utils/sort";
+    import { searchFilter } from "../utils/search";
+    import { setMenuPosition } from "../utils/menu";
+    import { fetchAndApplyIcon } from "../utils/icons";
+    import { initKeyboardNavigation } from "../utils/kbnavigation";
+
+    interface StartupEntry {
+        name: string;
+        command: string;
+        source: string;
+        enabled: boolean;
+        registry_path: string;
+    }
+
+    const iconCache = new Map<string, string>();
+
+    let currentName: string | null = null;
+    let currentSource: string | null = null;
+    let currentRegistry: string | null = null;
+    let currentPath: string | null = null;
+    let currentCommand: string | null = null;
+    let currentState: string | null = null;
+    let currentSearch = "";
+
+    type SortKey = "name" | "source" | "command" | "enabled";
+    type SortDir = "asc" | "desc";
+
+    let sortKey: SortKey = "name";
+    let sortDir: SortDir = "asc";
+    let lastEntries: StartupEntry[] = [];
+
+    function sortEntries(entries: StartupEntry[]): StartupEntry[] {
+        return [...entries].sort((a, b) => {
+            let cmp = 0;
+
+            switch (sortKey) {
+                case "name":
+                    cmp = a.name.localeCompare(b.name);
+                    break;
+
+                case "command":
+                    cmp = a.command.localeCompare(b.command);
+                    break;
+
+                case "source":
+                    cmp = a.source.localeCompare(b.source);
+                    break;
+
+                case "enabled":
+                    cmp = Number(a.enabled) - Number(b.enabled);
+                    break;
+            }
+
+            return sortDir === "asc" ? cmp : -cmp;
+        });
+    }
+
+    function renderEntries(entries: StartupEntry[]) {
+        const container = document.getElementById("startup-rows");
+        if (!container) return;
+
+        const sortedEntries = sortEntries(entries);
+
+        const rowsHtml = sortedEntries
+            .map((e) => {
+                if (e.command.includes('"')) {
+                    e.command = e.command.replace(/"/g, "");
+                }
+                const file_path = e.command.split("-")[0].trim();
+                const currentIcon = file_path
+                    ? iconCache.get(file_path)
+                    : undefined;
+
+                return `
+        <tr class="startup-entry" data-source="${e.source}" data-state="${e.enabled}" data-name="${e.name}" data-path="${file_path}" data-registry="${e.registry_path}" data-command="${e.command}">
+          <td>
+            <div class="name">
+              <img width="20px" height="20px" class="startup-icon" src=${currentIcon ?? "/startup.svg"} alt="" />
+              <span>${e.name}</span>
+            </div>
+          </td>
+          <td class="source">${e.source}</td>
+          <td class="command" title="${e.command}">${e.command}</td>
+          <td class="status" data-enabled="${e.enabled}">
+            ${e.enabled ? "Enabled" : "Disabled"}
+          </td>
+        </tr>
+      `;
+            })
+            .join("");
+
+        container.innerHTML = rowsHtml;
+
+        updateSortIndicators(sortKey, sortDir);
+        const rows = document.querySelectorAll(
+            "table tbody tr.startup-entry",
+        ) as NodeListOf<HTMLTableRowElement>;
+        searchFilter(rows, currentSearch);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document
+            .getElementById("autorunsRefresh")
+            ?.addEventListener("click", loadStartupEntries);
+
+        const container = document.getElementById("startup-list");
+        const menuElement = document.getElementById("startupMenu");
+
+        container?.addEventListener("click", async (event) => {
+            const th = (event.target as HTMLElement).closest("th[data-sort]");
+            const row = (event.target as HTMLElement).closest("tr");
+
+            if (row) {
+                container?.querySelectorAll("tr.selected").forEach((r) => {
+                    r.classList.remove("selected");
+                });
+                row.classList.add("selected");
+            }
+
+            if (th) {
+                const key = th.getAttribute("data-sort") as SortKey;
+                if (key === sortKey) {
+                    sortDir = sortDir === "asc" ? "desc" : "asc";
+                } else {
+                    sortKey = key;
+                    sortDir = "desc";
+                }
+                renderEntries(lastEntries);
+                loadIcons(lastEntries);
+            }
+        });
+
+        const handleMenuOpen = async (event: MouseEvent) => {
+            setMenuPosition(menuElement, event);
+
+            const row = (event.target as HTMLElement).closest(".startup-entry");
+            if (!row) return;
+            const name = row.getAttribute("data-name");
+            const source = row.getAttribute("data-source");
+            const path = row.getAttribute("data-path");
+            const state = row.getAttribute("data-state");
+            const command = row.getAttribute("data-command");
+            const registry = row.getAttribute("data-registry");
+
+            currentName = name;
+            currentSource = source;
+            currentPath = path;
+            currentState = state;
+            currentCommand = command;
+            currentRegistry = registry;
+
+            if (!name || !source || !path || !state || !command || !registry)
+                return;
+
+            const startupName = document.getElementById("startupName");
+            const toggleStartup = document.getElementById("toggleStartup");
+
+            if (!startupName || !toggleStartup) return;
+
+            const truncatedName =
+                name.length > 24 ? `${name.substring(0, 24)}...` : name;
+            startupName.textContent = "Task: " + truncatedName;
+            toggleStartup.textContent = state === "true" ? "Disable" : "Enable";
+        };
+
+        container?.addEventListener("contextmenu", handleMenuOpen);
+        container?.addEventListener("dblclick", (event) => {
+            const row = (event.target as HTMLElement).closest(
+                "tr.startup-entry",
+            );
+            if (row) {
+                handleMenuOpen(event);
+            }
+        });
+
+        document
+            .querySelector(".menu-item:has(#toggleStartup)")
+            ?.addEventListener("click", async () => {
+                await toggleStartupEntry(
+                    currentName,
+                    currentSource,
+                    currentRegistry,
+                    currentCommand,
+                    currentState,
+                );
+                loadStartupEntries();
+            });
+        document
+            .querySelector(".menu-item:has(#deleteStartup)")
+            ?.addEventListener("click", async () => {
+                if (!currentRegistry || !currentName) return;
+                await regDel(currentRegistry, currentName);
+                loadStartupEntries();
+            });
+        document
+            .querySelector(".menu-item:has(#locateRegistry)")
+            ?.addEventListener("click", async () => {
+                const args = [
+                    ...powershellArgs,
+                    `reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit /v LastKey /t REG_SZ /d "${currentRegistry}" /f; regedit.exe`,
+                ];
+                const shell = Command.create("powershell", args);
+                await shell.execute();
+            });
+        document
+            .querySelector(".menu-item:has(#locatePath)")
+            ?.addEventListener("click", async () => {
+                const args = [
+                    ...powershellArgs,
+                    `explorer.exe /select,"${currentPath}"`,
+                ];
+                const shell = Command.create("powershell", args);
+                await shell.execute();
+            });
+        document
+            .querySelector(".menu-item:has(#openProperties)")
+            ?.addEventListener("click", async () => {
+                if (!currentPath) return;
+                const lastSlashIndex = Math.max(
+                    currentPath.lastIndexOf("\\"),
+                    currentPath.lastIndexOf("/"),
+                );
+
+                if (lastSlashIndex === -1) {
+                    console.error("Could not split path:", currentPath);
+                    return;
+                }
+
+                const parent = currentPath.substring(0, lastSlashIndex);
+                const children = currentPath.substring(lastSlashIndex + 1);
+
+                const args = [
+                    ...powershellArgs,
+                    `$shell = New-Object -COMObject Shell.Application; $shell.NameSpace('${parent}').ParseName('${children}').InvokeVerb('Properties'); Start-Sleep -Seconds 600`,
+                ];
+
+                const shell = Command.create("powershell", args);
+                shell.spawn();
+            });
+
+        const searchBar = document.getElementById(
+            "searchStartup",
+        ) as HTMLInputElement;
+        searchBar?.addEventListener("input", () => {
+            currentSearch = searchBar.value.toLowerCase().trim();
+            const rows = document.querySelectorAll(
+                "table tbody tr.startup-entry",
+            ) as NodeListOf<HTMLTableRowElement>;
+            searchFilter(rows, currentSearch);
+        });
+
+        initKeyboardNavigation({
+            rowSelector: "table tbody tr.startup-entry",
+            getItemIdentity: (row) => ({
+                path: row.getAttribute("data-command"),
+                registry: row.getAttribute("data-registry"),
+            }),
+        });
+
+        document.addEventListener("click", (event) => {
+            if (event.target !== menuElement) {
+                menuElement?.classList.remove("active");
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            menuElement?.classList.remove("active");
+            container?.querySelectorAll("tr.selected").forEach((r) => {
+                r.classList.remove("selected");
+            });
+        });
+    });
+
+    async function loadIcons(entries: StartupEntry[]) {
+        const promises = entries
+            .filter((e) => e.command)
+            .map(async (e) => {
+                const exePath = e.command.split("-")[0].trim();
+
+                const img = document.querySelector<HTMLImageElement>(
+                    `.startup-entry[data-name="${e.name}"] .startup-icon`,
+                );
+
+                if (!exePath || !img) return;
+
+                fetchAndApplyIcon(exePath, img, iconCache);
+            });
+
+        await Promise.all(promises);
+    }
+
+    async function loadStartupEntries() {
+        lastEntries = await invoke<StartupEntry[]>("get_startup_entries");
+        renderEntries(lastEntries);
+        loadIcons(lastEntries);
+    }
+
+    loadStartupEntries();
+</script>

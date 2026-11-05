@@ -1,0 +1,20 @@
+---
+const { tab } = Astro.props;
+---
+
+<div class="tab-content" id=`${tab}-tab`>
+    <slot />
+</div>
+
+<style>
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow-y: auto;
+    }
+</style>

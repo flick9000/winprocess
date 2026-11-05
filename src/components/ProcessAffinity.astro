@@ -1,0 +1,172 @@
+---
+import { getCpuCoresArray } from "../utils/scripts";
+import { X } from "@lucide/astro";
+const cpuCores = getCpuCoresArray();
+---
+
+<dialog class="affinity-dialog" id="processAffinityDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h1>
+                CPU Affinity: <span id="modalPid"></span>
+            </h1>
+            <X id="closeAffinityDialog" class="close" size="24" />
+        </div>
+        <div class="modal-cores">
+            {cpuCores.map((core) => (
+                <div class="checkbox-wrapper">
+                    <label class="switch">
+                        <input
+                            class="checkbox-core"
+                            id={`core-${core}`}
+                            type="checkbox"
+                        />
+                        <span class="slider" />
+                    </label>
+                    <span>Core {core}</span>
+                </div>
+            ))}
+        </div>
+        <div class="modal-buttons">
+            <div class="checkbox-wrapper">
+                <label class="switch">
+                    <input id="alwaysCheck" type="checkbox" />
+                    <span class="slider"></span>
+                </label>
+                <span>Set as rule</span>
+            </div>
+            <button id="applyProcessAffinity">Apply</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    import { invoke } from "@tauri-apps/api/core";
+    import {
+        getCpuAffinity,
+        bitmaskToCpuArray,
+        setProcessAffinity,
+    } from "../utils/scripts";
+    import { LazyStore } from "@tauri-apps/plugin-store";
+
+    const always = new LazyStore("always.json");
+
+    const affinityDialog = document.querySelector(
+        "#processAffinityDialog",
+    ) as HTMLDialogElement;
+    const dialogDiv = affinityDialog.querySelector(
+        ".modal-content",
+    ) as HTMLDivElement;
+    const closeAffinityDialog = affinityDialog.querySelector(
+        "#closeAffinityDialog",
+    );
+    const cpuCheckboxes =
+        affinityDialog.querySelectorAll<HTMLInputElement>(".checkbox-core");
+    const pidHeader = affinityDialog.querySelector(
+        "#modalPid",
+    ) as HTMLSpanElement;
+    const applyProcessAffinity = affinityDialog.querySelector(
+        "#applyProcessAffinity",
+    ) as HTMLButtonElement;
+    const alwaysCheck = affinityDialog.querySelector(
+        "#alwaysCheck",
+    ) as HTMLInputElement;
+
+    let pid: number;
+    let name: string | undefined;
+    let path: string | undefined;
+    let affinity: number;
+    let coresArray: number[];
+
+    interface ProcessInfo {
+        pid: number;
+        name: string;
+        cpu: number;
+        priority: number;
+        affinity: number[] | null;
+        exe_path: string | null;
+        gpu_priority: number | null;
+        io_priority: number | null;
+        mem_priority: number | null;
+        boost: boolean | null;
+        efficiency_mode: boolean | null;
+    }
+
+    affinityDialog.addEventListener("open", async () => {
+        pid = Number(affinityDialog.dataset.pid);
+        name = affinityDialog.dataset.name;
+        path = affinityDialog.dataset.path;
+        if (!pid) return;
+
+        pidHeader.textContent = String(pid);
+
+        affinityDialog.showModal();
+
+        const process: ProcessInfo = await invoke("get_process_by_pid", {
+            pid: pid,
+        });
+
+        affinity = Number(process.affinity);
+        if (affinity) {
+            coresArray = bitmaskToCpuArray(affinity) ?? [];
+            checkedCores = coresArray;
+        }
+
+        cpuCheckboxes.forEach((checkbox) => {
+            const coreIndex = Number(checkbox.id.split("-")[1]);
+            if (coresArray && coresArray.includes(coreIndex)) {
+                checkbox.checked = true;
+            } else {
+                checkbox.checked = false;
+            }
+        });
+    });
+
+    let checkedCores = [] as number[];
+    cpuCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            const coreIndex = Number(checkbox.id.split("-")[1]);
+            if (checkbox.checked) {
+                checkedCores.push(coreIndex);
+            } else {
+                checkedCores = checkedCores.filter(
+                    (core) => core !== coreIndex,
+                );
+            }
+
+            applyProcessAffinity.disabled =
+                checkedCores.length === 0 ? true : false;
+            applyProcessAffinity.classList.toggle(
+                "disabled",
+                checkedCores.length === 0,
+            );
+        });
+    });
+
+    applyProcessAffinity.addEventListener("click", async () => {
+        const affinity = getCpuAffinity(checkedCores);
+
+        if (alwaysCheck.checked) {
+            always.set(`${name}_cpu_affinity`, {
+                path: path,
+                type: "cpu_affinity",
+                value: affinity,
+                cores: checkedCores,
+            });
+            always.save();
+        }
+
+        await setProcessAffinity(pid, affinity);
+        affinityDialog.close();
+    });
+
+    affinityDialog?.addEventListener("click", () => {
+        affinityDialog.close();
+    });
+
+    closeAffinityDialog?.addEventListener("click", () => {
+        affinityDialog.close();
+    });
+
+    dialogDiv.addEventListener("click", (event) => event.stopPropagation());
+</script>

@@ -1,0 +1,153 @@
+@media (prefers-color-scheme: light) {
+    .menu {
+        background-color: var(--elevated) !important;
+    }
+
+    .menu-item {
+        background-color: var(--elevated) !important;
+    }
+
+    .menu-item:hover {
+        background-color: var(--hover) !important;
+    }
+
+    .menu img {
+        filter: invert(34%) sepia(0%) saturate(343%) hue-rotate(222deg)
+            brightness(27%) contrast(82%) !important;
+    }
+}
+
+.menu {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    left: 0;
+    top: 0;
+    border: 1px solid var(--border-menu);
+    background-color: var(--hover);
+    border-radius: 5px;
+    min-width: 100px;
+    padding-block: 0.5rem;
+    min-height: fit-content;
+    z-index: 999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0s;
+}
+
+.menu .lucide {
+    min-width: 16px;
+    min-height: 16px;
+    max-width: 16px;
+    max-height: 16px;
+}
+
+.menu.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    min-width: max-content;
+    gap: 0.5rem;
+    text-wrap: nowrap;
+    position: relative;
+    padding: 0.25rem 1rem;
+    background-color: var(--hover);
+    width: 100%;
+    cursor: pointer;
+    z-index: 999;
+    transition: none;
+}
+
+.menu-item button {
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+}
+
+.menu-item .nested-icon:last-child {
+    margin-left: auto;
+    padding-left: 1rem;
+}
+
+.menu-item .checked {
+    opacity: 0;
+    margin-left: auto;
+    padding-left: 1rem;
+    flex-shrink: 0;
+}
+
+.menu-item:nth-child(1) {
+    border-radius: 5px 5px 0 0;
+}
+
+.menu-item:last-child {
+    border-radius: 0 0 5px 5px;
+}
+
+.menu-item.disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.menu-item.dropdown {
+    position: absolute;
+    display: flex;
+    left: 100%;
+    border: 1px solid var(--border-menu);
+    border-radius: 5px;
+    top: 0;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0s;
+}
+
+.menu-item:hover .dropdown {
+    flex-direction: column;
+    visibility: visible;
+    padding: 0;
+    opacity: 1;
+}
+
+.menu-item:hover .dropdown .nested {
+    width: 100%;
+}
+
+.menu-item:hover {
+    background-color: var(--border);
+}
+
+.menu-item.disabled:hover {
+    background-color: var(--hover);
+}
+
+.nest {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 100px;
+    background-color: var(--hover);
+    border: 1px solid var(--border-menu);
+    border-radius: 5px;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0s;
+}
+
+.menu.left .nest {
+    left: auto;
+    right: 100%;
+}
+
+.menu-item.has-dropdown:hover > .nest,
+.menu-item.has-dropdown:focus-within > .nest {
+    visibility: visible;
+    opacity: 1;
+}

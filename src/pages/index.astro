@@ -1,0 +1,161 @@
+---
+import "../styles/reset.css";
+import "../styles/variables.css";
+import "../styles/animations.css";
+import "../styles/global.css";
+import "../styles/menu.css";
+
+import Titlebar from "../components/Titlebar.astro";
+import Sidebar from "../components/Sidebar.astro";
+import Tab from "../components/Tab.astro";
+import Statusbar from "../components/Statusbar.astro";
+import Processes from "../components/Processes.astro";
+import Autoruns from "../components/Autoruns.astro";
+import ScheduledTasks from "../components/ScheduledTasks.astro";
+import ProcessAffinity from "../components/ProcessAffinity.astro";
+import Rules from "../components/Rules.astro";
+import Settings from "../components/Settings.astro";
+import NewProcess from "../components/NewProcess.astro";
+import NewRule from "../components/NewRule.astro";
+import RuleAffinity from "../components/RuleAffinity.astro";
+
+import { Plus, RefreshCw, Search } from "@lucide/astro";
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="icon" href="/icon.ico" />
+        <meta name="generator" content={Astro.generator} />
+        <script src="../utils/main.ts"></script>
+        <title>WinProcess</title>
+    </head>
+    <body>
+        <Titlebar />
+        <Sidebar />
+        <div class="content">
+            <div class="content-header">
+                <h1>WinProcess</h1>
+                <h1>-></h1>
+                <span id="content-header">WinProcess</span>
+            </div>
+            <div class="content-body">
+                <Tab tab="processes">
+                    <div class="tab-header">
+                        <h1 class="content-title">Active Processes</h1>
+                        <div class="tab-actions">
+                            <div id="newProcessButton" class="tab-button">
+                                <Plus size="20" />
+                                <span>New process</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-container">
+                        <Search size="16" class="search-icon" />
+                        <input
+                            autocomplete="off"
+                            placeholder="Search for a specific process"
+                            type="text"
+                            id="searchProcess"
+                        />
+                    </div>
+                    <div class="process-list">
+                        <Processes />
+                    </div>
+                    <NewProcess />
+                    <ProcessAffinity />
+                </Tab>
+                <Tab tab="rules">
+                    <div class="tab-header">
+                        <h1 class="content-title">Rules</h1>
+                        <div class="tab-actions">
+                            <div id="newRuleButton" class="tab-button">
+                                <Plus size="20" />
+                                <span>New rule</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-container">
+                        <Search size="16" class="search-icon" />
+                        <input
+                            autocomplete="off"
+                            placeholder="Search for a specific rule"
+                            type="text"
+                            id="searchRule"
+                        />
+                    </div>
+                    <div class="process-list">
+                        <Rules />
+                    </div>
+                    <NewRule />
+                    <RuleAffinity />
+                </Tab>
+                <Tab tab="autoruns">
+                    <div class="tab-header">
+                        <h1 class="content-title">Startup Apps</h1>
+                        <div class="tab-actions">
+                            <div id="autorunsRefresh" class="tab-button">
+                                <RefreshCw size="16" />
+                                <span>Refresh</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-container">
+                        <Search size="16" class="search-icon" />
+                        <input
+                            autocomplete="off"
+                            placeholder="Search for a specific autorun"
+                            type="text"
+                            id="searchStartup"
+                        />
+                    </div>
+                    <div class="autorun-list">
+                        <Autoruns />
+                    </div>
+                </Tab>
+                <Tab tab="tasks">
+                    <div class="tab-header">
+                        <h1 class="content-title">Scheduled Tasks</h1>
+                        <div class="tab-actions">
+                            <div class="checkbox-labeled">
+                                <label class="switch">
+                                    <input id="hideMicrosoft" type="checkbox" />
+                                    <span class="slider"></span>
+                                </label>
+                                <h1>Hide Microsoft Tasks</h1>
+                            </div>
+                            <div id="tasksRefresh" class="tab-button">
+                                <RefreshCw size="16" />
+                                <span>Refresh</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-container">
+                        <Search size="16" class="search-icon" />
+
+                        <input
+                            autocomplete="off"
+                            placeholder="Search for a specific task"
+                            type="text"
+                            id="searchTask"
+                        />
+                    </div>
+                    <div class="tasks-list">
+                        <ScheduledTasks />
+                    </div>
+                </Tab>
+                <Tab tab="settings">
+                    <div class="tab-header">
+                        <h1 class="content-title">App Settings</h1>
+                    </div>
+                    <div class="settings-list">
+                        <Settings />
+                    </div>
+                </Tab>
+            </div>
+        </div>
+        <Statusbar />
+    </body>
+</html>

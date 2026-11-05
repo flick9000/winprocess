@@ -1,0 +1,145 @@
+---
+import { getCpuCoresArray } from "../utils/scripts";
+import { X } from "@lucide/astro";
+
+const cpuCores = getCpuCoresArray();
+---
+
+<dialog class="affinity-dialog" id="ruleAffinityDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h1>
+                CPU Affinity: <span id="modalName"></span>
+            </h1>
+            <X id="closeAffinityDialog" class="close" size="24" />
+        </div>
+        <div class="modal-cores">
+            {cpuCores.map((core) => (
+                <div class="checkbox-wrapper">
+                    <label class="switch">
+                        <input
+                            class="checkbox-core"
+                            id={`core-${core}`}
+                            type="checkbox"
+                        />
+                        <span class="slider" />
+                    </label>
+                    <span>Core {core}</span>
+                </div>
+            ))}
+        </div>
+        <div class="modal-buttons">
+            <button id="applyRuleAffinity">Apply</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    import { getCpuAffinity, bitmaskToCpuArray } from "../utils/scripts";
+    import { LazyStore } from "@tauri-apps/plugin-store";
+
+    const always = new LazyStore("always.json");
+
+    const affinityDialog = document.querySelector(
+        "#ruleAffinityDialog",
+    ) as HTMLDialogElement;
+    const dialogDiv = affinityDialog.querySelector(
+        ".modal-content",
+    ) as HTMLDivElement;
+    const closeAffinityDialog = affinityDialog.querySelector(
+        "#closeAffinityDialog",
+    );
+    const cpuCheckboxes =
+        affinityDialog.querySelectorAll<HTMLInputElement>(".checkbox-core");
+    const nameHeader = affinityDialog.querySelector(
+        "#modalName",
+    ) as HTMLSpanElement;
+    const applyRuleAffinity = affinityDialog.querySelector(
+        "#applyRuleAffinity",
+    ) as HTMLButtonElement;
+
+    let name: string | undefined;
+    let type: string | undefined;
+    let path: string | undefined;
+    let affinity: number;
+    let coresArray: number[];
+
+    interface Rule {
+        name: string;
+        path: string;
+        type: string;
+        value: string;
+    }
+
+    affinityDialog.addEventListener("open", async () => {
+        name = affinityDialog.dataset.name;
+        path = affinityDialog.dataset.path;
+        type = affinityDialog.dataset.type;
+
+        if (!name || !path || !type) return;
+        nameHeader.textContent = name;
+
+        affinityDialog.showModal();
+
+        const rule = (await always.get(`${name}_cpu_affinity`)) as Rule;
+        if (rule && rule.value) {
+            affinity = Number(rule.value);
+            coresArray = bitmaskToCpuArray(affinity) ?? [];
+            checkedCores = coresArray;
+
+            cpuCheckboxes.forEach((checkbox) => {
+                const coreIndex = Number(checkbox.id.split("-")[1]);
+                if (coresArray.includes(coreIndex)) {
+                    checkbox.checked = true;
+                } else {
+                    checkbox.checked = false;
+                }
+            });
+        }
+    });
+
+    let checkedCores = [] as number[];
+    cpuCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            const coreIndex = Number(checkbox.id.split("-")[1]);
+            if (checkbox.checked) {
+                checkedCores.push(coreIndex);
+            } else {
+                checkedCores = checkedCores.filter(
+                    (core) => core !== coreIndex,
+                );
+            }
+
+            applyRuleAffinity.disabled =
+                checkedCores.length === 0 ? true : false;
+            applyRuleAffinity.classList.toggle(
+                "disabled",
+                checkedCores.length === 0,
+            );
+        });
+    });
+
+    applyRuleAffinity.addEventListener("click", async () => {
+        const affinity = getCpuAffinity(checkedCores);
+
+        always.set(`${name}_cpu_affinity`, {
+            path: path,
+            type: "cpu_affinity",
+            value: affinity,
+            cores: checkedCores,
+        });
+        always.save();
+
+        affinityDialog.close();
+    });
+
+    affinityDialog?.addEventListener("click", () => {
+        affinityDialog.close();
+    });
+
+    closeAffinityDialog?.addEventListener("click", () => {
+        affinityDialog.close();
+    });
+
+    dialogDiv.addEventListener("click", (event) => event.stopPropagation());
+</script>

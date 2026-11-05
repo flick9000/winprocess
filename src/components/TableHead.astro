@@ -1,0 +1,29 @@
+---
+interface Item {
+    dataSort: string;
+    text: string;
+}
+
+interface Props {
+    tableClass: string;
+    Items: Item[];
+}
+
+const { tableClass, Items } = Astro.props;
+---
+
+<table class={tableClass}>
+    <thead>
+        <tr>
+            {Items.map((item) => {
+                return (
+                    <th data-sort={item.dataSort}>
+                        {item.text}
+                        <span class="arrow"> ↑</span>
+                    </th>
+                );
+            })}
+        </tr>
+    </thead>
+    <slot />
+</table>

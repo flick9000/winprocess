@@ -1,0 +1,63 @@
+---
+import { X } from "@lucide/astro";
+---
+
+<dialog class="process-dialog" id="processDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h1>New Process</h1>
+            <X id="closeProcessDialog" class="close" size="24" />
+        </div>
+        <div class="modal-input">
+            <input
+                autocomplete="off"
+                type="text"
+                id="newProcessInput"
+                placeholder="C:\Windows\notepad.exe"
+            />
+        </div>
+        <div class="modal-buttons">
+            <button id="runProcessButton">Run</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    import { runNewProcess } from "../utils/scripts";
+    const processDialog = document.querySelector(
+        ".process-dialog",
+    ) as HTMLDialogElement;
+    const dialogDiv = processDialog.querySelector(
+        ".modal-content",
+    ) as HTMLDivElement;
+    const closeProcessDialog = document.getElementById(
+        "closeProcessDialog",
+    ) as HTMLButtonElement;
+    const runProcessButton = document.getElementById(
+        "runProcessButton",
+    ) as HTMLButtonElement;
+    const processInput = document.getElementById(
+        "newProcessInput",
+    ) as HTMLInputElement;
+
+    processDialog.addEventListener("open", async () => {
+        processDialog.showModal();
+    });
+
+    runProcessButton.addEventListener("click", async () => {
+        if (!processInput.value) return;
+
+        await runNewProcess(processInput.value);
+        processDialog.close();
+    });
+
+    processDialog.addEventListener("click", () => {
+        processDialog.close();
+    });
+
+    closeProcessDialog.addEventListener("click", () => {
+        processDialog.close();
+    });
+
+    dialogDiv.addEventListener("click", (event) => event.stopPropagation());
+</script>

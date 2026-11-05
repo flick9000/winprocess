@@ -1,0 +1,57 @@
+[package]
+name = "WinProcess"
+version = "1.0.0"
+description = ""
+authors = ["flick9000"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.5", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+rayon = "1"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.3.1", features = [ "tray-icon" ] }
+tauri-plugin-log = "2.0.0-rc"
+tauri-plugin-os = "2"
+sysinfo = "0.36.1"
+windows = { version = "0.61.3", features = [
+    "Win32_System_TaskScheduler",
+    "Win32_System_Com",
+    "Win32_System_Variant",
+] }
+image = "0.25.6"
+base64 = "0.22.1"
+winreg = "0.56.0"
+tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
+chrono = "0.4.45"
+tauri-plugin-dialog = "2"
+tauri-plugin-process = "2"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+
+[profile.dev]
+incremental = true
+opt-level = 0
+debug = true
+
+[profile.release]
+panic = "abort"
+lto = true
+opt-level = 3
+strip = true

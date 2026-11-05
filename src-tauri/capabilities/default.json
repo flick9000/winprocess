@@ -1,0 +1,74 @@
+{
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "default",
+    "description": "enables the default permissions",
+    "windows": ["main"],
+    "permissions": [
+        "core:default",
+        "os:default",
+        "core:window:default",
+        "core:window:allow-close",
+        "core:window:allow-minimize",
+        "core:window:allow-toggle-maximize",
+        "core:window:allow-start-dragging",
+        "core:window:allow-show",
+        "core:window:allow-hide",
+        "core:window:allow-set-focus",
+        "shell:allow-execute",
+        "shell:allow-spawn",
+        "shell:allow-open",
+        "core:tray:default",
+        "autostart:allow-enable",
+        "autostart:allow-disable",
+        "autostart:allow-is-enabled",
+        "core:app:allow-default-window-icon",
+        "dialog:default",
+        {
+            "identifier": "shell:allow-spawn",
+            "allow": [
+                {
+                    "name": "powershell",
+                    "cmd": "powershell.exe",
+                    "args": true
+                },
+                {
+                    "name": "powercfg",
+                    "cmd": "powercfg.exe",
+                    "args": true
+                },
+                {
+                    "name": "cmd",
+                    "cmd": "cmd.exe",
+                    "args": true
+                }
+            ]
+        },
+        {
+            "identifier": "shell:allow-execute",
+            "allow": [
+                {
+                    "name": "powershell",
+                    "cmd": "powershell.exe",
+                    "args": true
+                },
+                {
+                    "name": "powercfg",
+                    "cmd": "powercfg.exe",
+                    "args": true
+                },
+                {
+                    "name": "cmd",
+                    "cmd": "cmd.exe",
+                    "args": true
+                },
+                {
+                    "name": "where",
+                    "cmd": "where.exe",
+                    "args": true
+                }
+            ]
+        },
+        "store:default",
+        "updater:default"
+    ]
+}

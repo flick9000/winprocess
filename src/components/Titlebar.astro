@@ -1,0 +1,85 @@
+---
+import { Minus, Square, X, Heart } from "@lucide/astro";
+---
+
+<div class="titlebar">
+    <div data-tauri-drag-region></div>
+    <div class="controls">
+        <a target="_blank" href="https://ko-fi.com/flick9000">
+            <Heart fill={"currentColor"} stroke-width={1} size="20" />
+        </a>
+        <button id="titlebar-minimize" title="minimize">
+            <Minus size="20" />
+        </button>
+        <button id="titlebar-maximize" title="maximize">
+            <Square size="14" stroke-width="3" />
+        </button>
+        <button id="titlebar-close" title="close">
+            <X size="22" />
+        </button>
+    </div>
+</div>
+
+<script>
+    import { getCurrentWindow } from "@tauri-apps/api/window";
+    const appWindow = getCurrentWindow();
+
+    document
+        .getElementById("titlebar-minimize")
+        ?.addEventListener("click", () => appWindow.minimize());
+    document
+        .getElementById("titlebar-maximize")
+        ?.addEventListener("click", () => appWindow.toggleMaximize());
+    document
+        .getElementById("titlebar-close")
+        ?.addEventListener("click", () => appWindow.close());
+</script>
+
+<style>
+    *[data-tauri-drag-region] {
+        app-region: drag;
+    }
+    .titlebar {
+        height: 30px;
+        user-select: none;
+        display: grid;
+        grid-template-columns: auto max-content;
+        position: fixed;
+        width: 100%;
+        z-index: 999 !important;
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+    .titlebar > .controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .titlebar button,
+    .titlebar a {
+        appearance: none;
+        padding: 0;
+        margin: 0;
+        border: none;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 36px;
+        height: 36px;
+        background-color: transparent;
+        transition: all 0.1s ease-out;
+    }
+    .titlebar button svg {
+        color: var(--muted);
+    }
+    .titlebar button:hover,
+    .titlebar a:hover {
+        background: var(--border);
+    }
+    .titlebar button#titlebar-close:hover {
+        background: red;
+    }
+    .titlebar button#titlebar-close:hover svg {
+        color: var(--background);
+    }
+</style>

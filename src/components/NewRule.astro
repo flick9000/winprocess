@@ -1,0 +1,263 @@
+---
+import Select from "./Select.astro";
+import { X } from "@lucide/astro";
+
+const cpuPriorities = [
+    { value: "realtime", label: "Realtime" },
+    { value: "high", label: "High" },
+    { value: "abovenormal", label: "Above Normal" },
+    { value: "normal", label: "Normal" },
+    { value: "belownormal", label: "Below Normal" },
+    { value: "idle", label: "Idle" },
+];
+
+const gpuPreferences = [
+    { value: "GpuPreference=0;", label: "System Default" },
+    { value: "GpuPreference=1;", label: "Power Saving" },
+    { value: "GpuPreference=2;", label: "High Performance" },
+];
+
+const ioPriorities = [
+    { value: "high", label: "High" },
+    { value: "normal", label: "Normal" },
+    { value: "low", label: "Low" },
+    { value: "verylow", label: "Very Low" },
+];
+
+const memPriorities = [
+    { value: "normal", label: "Normal" },
+    { value: "belownormal", label: "Below Normal" },
+    { value: "medium", label: "Medium" },
+    { value: "low", label: "Low" },
+    { value: "verylow", label: "Very Low" },
+];
+
+const toggleState = [
+    { value: "true", label: "Enabled" },
+    { value: "false", label: "Disabled" },
+];
+
+const rules = [
+    {
+        value: "cpu",
+        key: "cpu_priority",
+        label: "CPU Priority",
+        select: cpuPriorities,
+        id: "cpuPriority",
+    },
+    {
+        value: "io",
+        key: "io_priority",
+        label: "I/O Priority",
+        select: ioPriorities,
+        id: "ioPriority",
+    },
+    {
+        value: "gpu",
+        key: "gpu_priority",
+        label: "GPU Priority",
+        select: cpuPriorities,
+        id: "gpuPriority",
+    },
+    {
+        value: "gpu_preference",
+        key: "gpu_preference",
+        label: "GPU Preference",
+        select: gpuPreferences,
+        id: "gpuPreference",
+    },
+    {
+        value: "mem",
+        key: "mem_priority",
+        label: "Memory Priority",
+        select: memPriorities,
+        id: "memPriority",
+    },
+    {
+        value: "efficiency",
+        key: "efficiency_mode",
+        label: "Efficiency Mode",
+        select: toggleState,
+        id: "efficiencyMode",
+    },
+    {
+        value: "boost",
+        key: "boost",
+        label: "Boost",
+        select: toggleState,
+        id: "boostMode",
+    },
+];
+---
+
+<dialog class="rule-dialog" id="ruleDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h1>New Rule</h1>
+            <X id="closeRuleDialog" class="close" size="24" />
+        </div>
+        <div class="modal-input">
+            <input
+                autocomplete="off"
+                type="text"
+                id="ruleInputName"
+                placeholder="C:\Windows\notepad.exe"
+            />
+            <button id="ruleFileDialog">Browse</button>
+        </div>
+        <div class="modal-rule">
+            <Select
+                width="140px"
+                id="ruleType"
+                name="Rule"
+                options={rules}
+                defaultValue="cpu"
+            />
+            {rules.map((rule) => (
+                <Select
+                    width="140px"
+                    id={rule.id}
+                    name="Rule"
+                    options={rule.select}
+                    defaultValue={rule.select[0].value}
+                    hidden
+                />
+            ))}
+        </div>
+        <div class="modal-buttons">
+            <button id="addRuleButton">Add</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    import { open } from "@tauri-apps/plugin-dialog";
+    import { LazyStore } from "@tauri-apps/plugin-store";
+
+    const ruleDialog = document.querySelector(
+        ".rule-dialog",
+    ) as HTMLDialogElement;
+    const dialogDiv = ruleDialog.querySelector(
+        ".modal-content",
+    ) as HTMLDivElement;
+    const closeRuleDialog = document.getElementById(
+        "closeRuleDialog",
+    ) as HTMLButtonElement;
+    const addRuleButton = document.getElementById(
+        "addRuleButton",
+    ) as HTMLButtonElement;
+    const ruleFileDialog = document.getElementById(
+        "ruleFileDialog",
+    ) as HTMLButtonElement;
+    const ruleInput = document.getElementById(
+        "ruleInputName",
+    ) as HTMLInputElement;
+    const ruleType = document.getElementById("ruleType") as HTMLSelectElement;
+
+    const always = new LazyStore("always.json");
+
+    const defaultSelect = document.getElementById(
+        `${ruleType.value}Priority-container`,
+    );
+    if (defaultSelect) {
+        defaultSelect.style.display = "flex";
+        defaultSelect.dataset.active = "true";
+    }
+
+    ruleType.addEventListener("change", () => {
+        const allSelects = document.querySelectorAll(
+            ".modal-rule .custom-select-container:not(#ruleType-container)",
+        ) as NodeListOf<HTMLDivElement>;
+        allSelects.forEach((select) => {
+            select.style.display = "none";
+            select.setAttribute("data-active", "false");
+        });
+        if (ruleType.value === "efficiency" || ruleType.value === "boost") {
+            const select = document.getElementById(
+                `${ruleType.value}Mode-container`,
+            );
+            if (!select) return;
+            select.style.display = "flex";
+            select.dataset.active = "true";
+        }
+        console.log(ruleType);
+        if (ruleType.value === "gpu_preference") {
+            const select = document.getElementById(`gpuPreference-container`);
+            if (!select) return;
+            select.style.display = "flex";
+            select.dataset.active = "true";
+        }
+        const select = document.getElementById(
+            `${ruleType.value}Priority-container`,
+        );
+        if (!select) return;
+        select.style.display = "flex";
+        select.dataset.active = "true";
+    });
+
+    ruleDialog.addEventListener("open", async () => {
+        ruleDialog.showModal();
+    });
+
+    ruleFileDialog.addEventListener("click", async () => {
+        const file = await open({
+            multiple: false,
+            directory: false,
+            filters: [
+                {
+                    name: "Executable",
+                    extensions: ["exe"],
+                },
+            ],
+        });
+        if (file) {
+            ruleInput.value = file;
+            console.log(ruleInput);
+        }
+    });
+
+    addRuleButton.addEventListener("click", async () => {
+        if (!ruleInput.value || !ruleType.value) return;
+
+        const ruleInputName = ruleInput.value.split("\\").pop();
+        const rulePath = ruleInput.value;
+        const ruleKey = ruleType.dataset.key;
+        const ruleValue = document.querySelector(
+            '.custom-select-container[data-active="true"] .select-option[aria-selected="true"]',
+        ) as HTMLDivElement;
+
+        console.log(ruleValue.dataset.value);
+        console.log(ruleInputName, rulePath, ruleKey);
+
+        always.set(`${ruleInputName}_${ruleKey}`, {
+            path: rulePath,
+            type: ruleKey,
+            value: ruleValue.dataset.value,
+        });
+
+        ruleDialog.close();
+    });
+
+    ruleDialog.addEventListener("click", () => {
+        ruleDialog.close();
+    });
+
+    closeRuleDialog.addEventListener("click", () => {
+        ruleDialog.close();
+    });
+
+    dialogDiv.addEventListener("click", (event) => event.stopPropagation());
+</script>
+
+<style>
+    #ruleFileDialog:hover {
+        background: var(--hover);
+    }
+
+    .modal-rule {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+    }
+</style>

@@ -1,0 +1,35 @@
+{
+    "name": "winprocess",
+    "type": "module",
+    "version": "1.0.0",
+    "engines": {
+        "node": ">=22.12.0"
+    },
+    "scripts": {
+        "dev": "tauri dev",
+        "build": "tauri build",
+        "preview": "astro preview",
+        "astro": "astro",
+        "tauri": "tauri",
+        "format": "prettier --write \"**/*.{js,mjs,cjs,ts,tsx,astro,json,css,scss,md}\""
+    },
+    "dependencies": {
+        "@lucide/astro": "^1.58.0",
+        "@tauri-apps/api": "^2.11.0",
+        "@tauri-apps/cli": "^2.11.2",
+        "@tauri-apps/plugin-autostart": "^2.5.1",
+        "@tauri-apps/plugin-dialog": "^2.8.4",
+        "@tauri-apps/plugin-os": "^2.3.2",
+        "@tauri-apps/plugin-process": "^2.4.0",
+        "@tauri-apps/plugin-shell": "^2.3.5",
+        "@tauri-apps/plugin-store": "^2.4.3",
+        "@tauri-apps/plugin-updater": "^2.14.1",
+        "astro": "^7.2.9",
+        "browserslist": "^4.28.8",
+        "lightningcss": "^1.33.0"
+    },
+    "devDependencies": {
+        "@types/node": "^26.5.0",
+        "prettier-plugin-astro": "^1.0.0"
+    }
+}

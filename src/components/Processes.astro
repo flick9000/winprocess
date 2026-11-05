@@ -1,0 +1,1062 @@
+---
+import MenuItem from "./MenuItem.astro";
+import TableHead from "./TableHead.astro";
+import { STATIC_MENUS } from "../utils/menu";
+import {
+    ArrowDown10,
+    Ban,
+    Clipboard,
+    Cog,
+    Copy,
+    Cpu,
+    Folder,
+    Gpu,
+    HardDrive,
+    Layers,
+    MemoryStick,
+    MonitorCog,
+    Rocket,
+    RotateCcw,
+    Trash,
+    Zap,
+} from "@lucide/astro";
+
+const tableHeader = [
+    { dataSort: "name", text: "Name" },
+    { dataSort: "rules", text: "Rules" },
+    { dataSort: "affinity", text: "Affinity" },
+    { dataSort: "priority", text: "Priority" },
+    { dataSort: "pid", text: "PID" },
+    { dataSort: "cpu", text: "CPU" },
+];
+---
+
+<div id="process-list">
+    <TableHead tableClass="process-table" Items={tableHeader}>
+        <tbody id="process-rows"></tbody>
+    </TableHead>
+</div>
+
+<div id="processMenu" class="menu">
+    <MenuItem id="processName" label="Name:" disabled dropdown={false} />
+    <MenuItem
+        id="processCpuAffinity"
+        icon={ArrowDown10}
+        label="CPU Affinity"
+        dropdown={false}
+    />
+    <MenuItem
+        id="processCpuPriority"
+        icon={Cpu}
+        label="CPU Priority"
+        dropdown
+        items={STATIC_MENUS.cpu}
+    />
+    <MenuItem
+        id="processIoPriority"
+        icon={HardDrive}
+        label="I/O Priority"
+        dropdown
+        items={STATIC_MENUS.io}
+    />
+    <MenuItem
+        id="processGpuPriority"
+        icon={Gpu}
+        label="GPU Priority"
+        dropdown
+        items={STATIC_MENUS.gpu}
+    />
+    <MenuItem
+        id="processGpuPreference"
+        icon={MonitorCog}
+        label="GPU Preference"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.gpu_preference}
+    />
+    <MenuItem
+        id="processMemoryPriority"
+        icon={MemoryStick}
+        label="Memory Priority"
+        dropdown
+        items={STATIC_MENUS.mem}
+    />
+    <MenuItem
+        id="processPlan"
+        containerClass="plans-container"
+        icon={Zap}
+        label="Induce Power Plan"
+        dropdown
+        onlyLevel
+        items={[]}
+    />
+    <MenuItem
+        id="processEfficiency"
+        icon={Cog}
+        label="Efficiency Mode"
+        dropdown
+        items={STATIC_MENUS.efficiency}
+    />
+    <MenuItem
+        id="processBoost"
+        icon={Rocket}
+        label="Boost"
+        dropdown
+        items={STATIC_MENUS.boost}
+    />
+    <hr />
+    <MenuItem
+        id="processCopyRules"
+        icon={Copy}
+        label="Copy Rules"
+        dropdown={false}
+    />
+    <MenuItem
+        id="processPasteRules"
+        icon={Clipboard}
+        label="Paste Rules"
+        dropdown={false}
+    />
+    <MenuItem
+        id="processRemoveRules"
+        icon={Trash}
+        label="Remove Rules"
+        dropdown={false}
+    />
+    <hr />
+    <MenuItem
+        id="processLocate"
+        icon={Folder}
+        label="Locate"
+        dropdown={false}
+    />
+    <MenuItem
+        id="processRestart"
+        icon={RotateCcw}
+        label="Restart"
+        dropdown={false}
+    />
+    <MenuItem
+        id="processTerminate"
+        icon={Ban}
+        label="Terminate"
+        dropdown={false}
+    />
+    <hr />
+    <MenuItem
+        id="processApplyToAllInstances"
+        icon={Layers}
+        label="Apply to All Instances"
+        dropdown={false}
+    />
+</div>
+
+<script>
+    import { invoke } from "@tauri-apps/api/core";
+    import { LazyStore } from "@tauri-apps/plugin-store";
+    import { updateSortIndicators } from "../utils/sort";
+    import { searchFilter } from "../utils/search";
+    import { setMenuPosition } from "../utils/menu";
+    import { loadPowerPlans } from "../utils/powerplans";
+
+    import {
+        formatAffinity,
+        setCpuPriority,
+        setIOPriority,
+        setMemoryPriority,
+        setGPUPriority,
+        terminateProcess,
+        toggleProcessBoost,
+        toggleEfficiencyMode,
+        locateProcess,
+        setPowerPlan,
+        getProcessRulesShortcut,
+        setProcessAffinity,
+        bitmaskToCpuArray,
+        setGPUPreference,
+        restartProcess,
+    } from "../utils/scripts";
+    import { fetchAndApplyIcon } from "../utils/icons";
+    import { initKeyboardNavigation } from "../utils/kbnavigation";
+
+    const always = new LazyStore("always.json");
+
+    interface ProcessInfo {
+        pid: number;
+        name: string;
+        cpu: number;
+        priority: number;
+        affinity: number[] | null;
+        exe_path: string | null;
+        gpu_priority: number | null;
+        io_priority: number | null;
+        mem_priority: number | null;
+        boost: boolean | null;
+        efficiency_mode: boolean | null;
+    }
+
+    interface RawProcessInfo {
+        pid: number;
+        name?: string;
+        exe_path?: string;
+        cpu: number;
+        priority: number;
+        affinity?: number;
+        io_priority?: number;
+        mem_priority?: number;
+        boost?: boolean;
+        efficiency_mode?: boolean;
+        gpu_priority?: number;
+    }
+
+    const CPU_PRIORITY_IDS: Record<number, string> = {
+        [-20]: "realtime",
+        [-10]: "high",
+        [-5]: "abovenormal",
+        0: "normal",
+        10: "belownormal",
+        19: "idle",
+    };
+
+    const CPU_PRIORITY_LABELS: Record<number, string> = {
+        19: "Idle",
+        10: "Below Normal",
+        0: "Normal",
+        [-1]: "Protected",
+        [-5]: "Above Normal",
+        [-10]: "High",
+        [-20]: "Realtime",
+    };
+
+    const GPU_PRIORITY_IDS: Record<number, string> = {
+        0: "idle",
+        1: "belownormal",
+        2: "normal",
+        3: "abovenormal",
+        4: "high",
+        5: "realtime",
+    };
+
+    const IO_PRIORITY_IDS: Record<number, string> = {
+        0: "verylow",
+        1: "low",
+        2: "normal",
+        3: "high",
+    };
+
+    const MEM_PRIORITY_IDS: Record<number, string> = {
+        0: "verylow",
+        1: "verylow",
+        2: "low",
+        3: "medium",
+        4: "belownormal",
+        5: "normal",
+    };
+
+    let copiedRules: { key: string; value: string }[] = [];
+    let currentPid: number | null = null;
+    let currentName: string | null = null;
+    let currentPath: string | null = null;
+    let currentSearch = "";
+
+    let currentPidsSet = new Map<number, string>();
+    const processCache = new Map<number, ProcessInfo>();
+
+    function mergeProcess(raw: RawProcessInfo): ProcessInfo {
+        const cached = processCache.get(raw.pid);
+        const merged: ProcessInfo = {
+            pid: raw.pid,
+            cpu: raw.cpu,
+            priority: raw.priority,
+            name: raw.name ?? cached?.name ?? "",
+            exe_path: raw.exe_path ?? cached?.exe_path ?? null,
+            affinity:
+                raw.affinity !== undefined
+                    ? bitmaskToCpuArray(raw.affinity)
+                    : (cached?.affinity ?? null),
+            io_priority: raw.io_priority ?? cached?.io_priority ?? null,
+            mem_priority: raw.mem_priority ?? cached?.mem_priority ?? null,
+            boost: raw.boost ?? cached?.boost ?? null,
+            efficiency_mode:
+                raw.efficiency_mode ?? cached?.efficiency_mode ?? null,
+            gpu_priority: raw.gpu_priority ?? cached?.gpu_priority ?? null,
+        };
+        processCache.set(raw.pid, merged);
+        return merged;
+    }
+
+    function mergeProcessList(raw: RawProcessInfo[]): ProcessInfo[] {
+        const merged = raw.map(mergeProcess);
+        const livePids = new Set(raw.map((p) => p.pid));
+        for (const pid of processCache.keys()) {
+            if (!livePids.has(pid)) processCache.delete(pid);
+        }
+        return merged;
+    }
+
+    async function refreshSingleProcess(pid: number) {
+        const targetRaw: RawProcessInfo = await invoke("get_process_by_pid", {
+            pid: pid,
+        });
+        if (!targetRaw) return;
+
+        const updated = mergeProcess(targetRaw);
+        const index = lastProcesses.findIndex((p) => p.pid === pid);
+        if (index !== -1) {
+            lastProcesses[index] = updated;
+        }
+    }
+
+    const RULE_APPLIERS: Record<
+        string,
+        (pid: number, value: string) => Promise<void>
+    > = {
+        cpu_affinity: setProcessAffinity,
+        cpu_priority: setCpuPriority,
+        io_priority: setIOPriority,
+        gpu_priority: setGPUPriority,
+        powerplan: setPowerPlan,
+        mem_priority: setMemoryPriority,
+        efficiency_mode: toggleEfficiencyMode,
+        boost: toggleProcessBoost,
+    };
+
+    let lastProcesses: ProcessInfo[] = [];
+
+    const iconCache = new Map<string, string>();
+    const ruleCache = new Map<string, string>();
+
+    type SortKey = "name" | "rules" | "cpu" | "priority" | "pid" | "affinity";
+    type SortDir = "asc" | "desc";
+    let sortKey: SortKey = "name";
+    let sortDir: SortDir = "asc";
+
+    async function syncMenuChecks(currentPid: number) {
+        const process: RawProcessInfo = await invoke("get_process_by_pid", {
+            pid: currentPid,
+        });
+        if (!process) return;
+
+        const allChecked = document.querySelectorAll(
+            "#processMenu .checked:has(img)",
+        ) as NodeListOf<HTMLDivElement>;
+        allChecked.forEach((check) => {
+            check.style.opacity = "0";
+        });
+
+        const allRules = await always.keys();
+        const rules = (
+            await Promise.all(
+                allRules
+                    .filter((rule) => rule.startsWith(`${process.name}_`))
+                    .map(async (rule) => {
+                        const stored = await always.get<{ value: string }>(
+                            rule,
+                        );
+                        return stored
+                            ? {
+                                  key: rule.replace(`${process.name}_`, ""),
+                                  value: stored.value,
+                              }
+                            : null;
+                    }),
+            )
+        ).filter(
+            (entry): entry is { key: string; value: string } => entry !== null,
+        );
+
+        function setChecked(
+            mode: "current" | "always",
+            type: string,
+            value: string,
+        ) {
+            const button = document.querySelector(
+                `ul.${mode} button[data-type="${type}"][data-value="${value}"]`,
+            );
+            const li = button?.closest("li");
+            const checked = li?.querySelector(
+                ".checked",
+            ) as HTMLDivElement | null;
+
+            if (checked) {
+                checked.style.opacity = "1";
+            }
+        }
+
+        for (const rule of rules) {
+            if (rule.key === "cpu_affinity") continue;
+            setChecked("always", rule.key, rule.value);
+        }
+
+        if (process.priority != null && process.priority !== -1) {
+            setChecked(
+                "current",
+                "cpu_priority",
+                CPU_PRIORITY_IDS[process.priority],
+            );
+        }
+        if (process.io_priority != null) {
+            setChecked(
+                "current",
+                "io_priority",
+                IO_PRIORITY_IDS[process.io_priority],
+            );
+        }
+        if (process.gpu_priority != null) {
+            setChecked(
+                "current",
+                "gpu_priority",
+                GPU_PRIORITY_IDS[process.gpu_priority],
+            );
+        }
+        if (process.mem_priority != null) {
+            setChecked(
+                "current",
+                "mem_priority",
+                MEM_PRIORITY_IDS[process.mem_priority],
+            );
+        }
+        if (process.boost != null) {
+            setChecked("current", "boost", String(process.boost));
+        }
+        if (process.efficiency_mode != null) {
+            setChecked(
+                "current",
+                "efficiency_mode",
+                String(process.efficiency_mode),
+            );
+        }
+    }
+
+    function sortProcesses(processes: ProcessInfo[]): ProcessInfo[] {
+        return [...processes].sort((a, b) => {
+            let cmp = 0;
+            switch (sortKey) {
+                case "name":
+                    cmp = a.name.localeCompare(b.name);
+                    break;
+                case "rules":
+                    const rulesA =
+                        document.querySelector(
+                            `.process[data-pid="${a.pid}"] .rules`,
+                        )?.textContent || "";
+                    const rulesB =
+                        document.querySelector(
+                            `.process[data-pid="${b.pid}"] .rules`,
+                        )?.textContent || "";
+                    cmp = rulesA.localeCompare(rulesB);
+                    break;
+                case "cpu":
+                    cmp = a.cpu - b.cpu;
+                    break;
+                case "priority":
+                    cmp = a.priority - b.priority;
+                    break;
+                case "pid":
+                    cmp = a.pid - b.pid;
+                    break;
+                case "affinity":
+                    cmp =
+                        (a.affinity?.length ?? -1) - (b.affinity?.length ?? -1);
+                    break;
+            }
+            return sortDir === "asc" ? cmp : -cmp;
+        });
+    }
+
+    function renderProcesses(processes: ProcessInfo[]) {
+        const container = document.getElementById("process-rows");
+        if (!container) return;
+
+        const sortedProcesses = sortProcesses(processes).filter(
+            (p) => p.pid !== 0,
+        );
+
+        const rowsHtml = sortedProcesses
+            .map((p) => {
+                const cachedIcon = p.exe_path
+                    ? iconCache.get(p.exe_path)
+                    : undefined;
+
+                const cachedRule = p.exe_path
+                    ? ruleCache.get(p.exe_path)
+                    : undefined;
+
+                return `
+                
+
+        <tr class="process" data-name="${p.name}" data-path="${p.exe_path}" data-pid="${p.pid}">
+          <td>
+            <div class="name">
+              <img width="20px" height="20px" class="process-icon" src="${cachedIcon ?? "/process.svg"}" alt="" />
+              <span>${p.name}</span>
+            </div>
+          </td>
+          <td class="rules">${cachedRule ?? ""}</td>
+          <td class="affinity">${formatAffinity(p.affinity)}</td>
+          <td data-priority="${p.priority}" class="priority">
+            <span>${CPU_PRIORITY_LABELS[p.priority] ?? p.priority}</span>
+          </td>
+          <td class="pid">${p.pid}</td>
+          <td class="cpu">${p.cpu.toFixed(1)}%</td>
+        </tr>
+      `;
+            })
+            .join("");
+
+        container.innerHTML = rowsHtml;
+
+        updateSortIndicators(sortKey, sortDir);
+        const rows = document.querySelectorAll(
+            "table tbody tr.process",
+        ) as NodeListOf<HTMLTableRowElement>;
+        searchFilter(rows, currentSearch);
+    }
+
+    async function getRules() {
+        const processes = lastProcesses.filter((p) => p.pid !== 0);
+
+        return Promise.all(
+            processes.map(async (p) => {
+                if (!p.exe_path) return;
+                const rules = await getProcessRulesShortcut(p, always);
+                const formattedRules = rules.join("");
+
+                if (formattedRules === "") {
+                    return;
+                }
+
+                ruleCache.set(p.exe_path, formattedRules);
+
+                const rulesCell = document.querySelector(
+                    `.process[data-pid="${p.pid}"] .rules`,
+                );
+                if (rulesCell) rulesCell.innerHTML = formattedRules;
+            }),
+        );
+    }
+
+    async function loadIcons(processes: ProcessInfo[]) {
+        const promises = processes.map(async (p) => {
+            const img = document.querySelector<HTMLImageElement>(
+                `.process[data-pid="${p.pid}"] .process-icon`,
+            );
+
+            if (!img || !p.exe_path) return;
+
+            fetchAndApplyIcon(p.exe_path, img, iconCache);
+        });
+
+        await Promise.all(promises);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const container = document.getElementById("process-list");
+        const menuElement = document.getElementById("processMenu");
+
+        const plansContainer = document.querySelector(
+            "#processMenu .plans-container",
+        );
+
+        await loadPowerPlans(plansContainer);
+
+        document
+            .getElementById("newProcessButton")
+            ?.addEventListener("click", () => {
+                const processDialog = document.querySelector(
+                    ".process-dialog",
+                ) as HTMLDialogElement;
+                processDialog.dispatchEvent(new Event("open"));
+            });
+
+        container?.addEventListener("click", async (event) => {
+            const th = (event.target as HTMLElement).closest("th[data-sort]");
+            const row = (event.target as HTMLElement).closest("tr");
+
+            if (row) {
+                container?.querySelectorAll("tr.selected").forEach((r) => {
+                    r.classList.remove("selected");
+                });
+                row.classList.add("selected");
+            }
+
+            if (th) {
+                const key = th.getAttribute("data-sort") as SortKey;
+                if (key === sortKey) {
+                    sortDir = sortDir === "asc" ? "desc" : "asc";
+                } else {
+                    sortKey = key;
+                    sortDir = "desc";
+                }
+                reorderRows(lastProcesses);
+            }
+        });
+
+        const handleMenuOpen = async (event: MouseEvent) => {
+            setMenuPosition(menuElement, event);
+
+            const row = (event.target as HTMLElement).closest(".process");
+            if (!row) return;
+            const pid = row.getAttribute("data-pid");
+            const name = row.getAttribute("data-name");
+            const path = row.getAttribute("data-path");
+
+            if (!pid || !name || !path) return;
+            currentPid = Number(pid);
+            currentName = String(name);
+            currentPath = String(path);
+
+            const processName = document.getElementById("processName");
+            if (processName) {
+                processName.textContent = name;
+            }
+
+            await syncMenuChecks(currentPid);
+        };
+
+        container?.addEventListener("contextmenu", handleMenuOpen);
+        container?.addEventListener("dblclick", (event) => {
+            const row = (event.target as HTMLElement).closest("tr.process");
+            if (row) {
+                handleMenuOpen(event);
+            }
+        });
+
+        const nestedButtons = document.querySelectorAll(
+            "#processMenu .nested-button",
+        );
+        nestedButtons.forEach((button) => {
+            const menuItem = button.closest("li");
+            menuItem?.addEventListener("click", async () => {
+                const type = button.getAttribute("data-type");
+                const value = button.getAttribute("data-value");
+                const mode = button.closest("ul")?.classList.contains("always")
+                    ? "always"
+                    : "current";
+
+                if (!type || !value || !mode || !currentPid) return;
+
+                if (mode === "always") {
+                    always.set(`${currentName}_${type}`, {
+                        path: currentPath,
+                        type: type,
+                        value: value,
+                    });
+                    await always.save();
+                }
+
+                if (type === "gpu_preference") {
+                    if (!currentPath || !value) return;
+                    setGPUPreference(currentPath, value);
+                    loadProcesses();
+                    return;
+                }
+
+                await RULE_APPLIERS[type](currentPid, value);
+                await refreshSingleProcess(currentPid);
+                updateProcessesRows(lastProcesses);
+                reorderRows(lastProcesses);
+            });
+        });
+
+        document
+            .querySelector(".menu-item:has(#processCpuAffinity)")
+            ?.addEventListener("click", async () => {
+                const affinityDialog = document.querySelector(
+                    "#processAffinityDialog",
+                ) as HTMLDialogElement;
+                affinityDialog.dataset.pid = String(currentPid);
+                affinityDialog.dataset.name = String(currentName);
+                affinityDialog.dataset.path = String(currentPath);
+                affinityDialog.dispatchEvent(new Event("open"));
+            });
+
+        document
+            .querySelector(".menu-item:has(#processCopyRules)")
+            ?.addEventListener("click", async () => {
+                const allRules = await always.keys();
+                const itemRules = allRules.filter((rule) =>
+                    rule.startsWith(`${currentName}_`),
+                );
+                const entries = await Promise.all(
+                    itemRules.map(async (rule) => {
+                        const stored = await always.get<{ value: string }>(
+                            rule,
+                        );
+                        return stored
+                            ? {
+                                  key: rule.replace(`${currentName}_`, ""),
+                                  value: stored.value,
+                              }
+                            : null;
+                    }),
+                );
+                copiedRules = entries.filter(
+                    (entry): entry is { key: string; value: string } =>
+                        entry !== null,
+                );
+            });
+
+        document
+            .querySelector(".menu-item:has(#processPasteRules)")
+            ?.addEventListener("click", async () => {
+                for (const rule of copiedRules) {
+                    always.set(`${currentName}_${rule.key}`, {
+                        path: currentPath,
+                        type: rule.key,
+                        value: rule.value,
+                    });
+                }
+
+                await always.save();
+            });
+
+        document
+            .querySelector(".menu-item:has(#processRemoveRules)")
+            ?.addEventListener("click", async () => {
+                const allRules = await always.keys();
+                allRules
+                    .filter((rule) => rule.startsWith(`${currentName}_`))
+                    .forEach((rule) => always.delete(rule));
+                await always.save();
+            });
+
+        document
+            .querySelector(".menu-item:has(#processLocate)")
+            ?.addEventListener("click", async () => {
+                if (!currentPid) return;
+                locateProcess(currentPid);
+            });
+
+        document
+            .querySelector(".menu-item:has(#processRestart)")
+            ?.addEventListener("click", async () => {
+                if (!currentPid || !currentPath) return;
+                restartProcess(currentPid, currentPath);
+            });
+
+        document
+            .querySelector(".menu-item:has(#processTerminate)")
+            ?.addEventListener("click", async () => {
+                if (!currentPid) return;
+                await terminateProcess(currentPid);
+                loadProcesses();
+            });
+
+        document
+            .querySelector(".menu-item:has(#processApplyToAllInstances)")
+            ?.addEventListener("click", async () => {
+                const process = lastProcesses.find((p) => p.pid === currentPid);
+                if (!process) return;
+
+                let otherIstancesPids: number[] = [];
+                const otherIstancesRows = document.querySelectorAll(
+                    `tr[data-name="${currentName}"]:not([data-pid="${currentPid}"])`,
+                );
+                otherIstancesRows.forEach((row) => {
+                    const pid = Number(row.getAttribute("data-pid"));
+                    otherIstancesPids.push(pid);
+                });
+
+                await Promise.all(
+                    otherIstancesPids.map(async (pid) => {
+                        if (
+                            process.priority !== null &&
+                            process.priority !== -1
+                        ) {
+                            await RULE_APPLIERS["cpu_priority"](
+                                pid,
+                                CPU_PRIORITY_IDS[process.priority],
+                            );
+                        }
+                        if (process.io_priority !== null) {
+                            await RULE_APPLIERS["io_priority"](
+                                pid,
+                                IO_PRIORITY_IDS[process.io_priority],
+                            );
+                        }
+                        if (process.gpu_priority !== null) {
+                            await RULE_APPLIERS["gpu_priority"](
+                                pid,
+                                GPU_PRIORITY_IDS[process.gpu_priority],
+                            );
+                        }
+                        if (process.mem_priority !== null) {
+                            await RULE_APPLIERS["mem_priority"](
+                                pid,
+                                MEM_PRIORITY_IDS[process.mem_priority],
+                            );
+                        }
+                        if (process.efficiency_mode !== null) {
+                            await RULE_APPLIERS["efficiency_mode"](
+                                pid,
+                                String(process.efficiency_mode),
+                            );
+                        }
+                        if (process.boost !== null) {
+                            await RULE_APPLIERS["boost"](
+                                pid,
+                                String(process.boost),
+                            );
+                        }
+                    }),
+                );
+
+                loadProcesses();
+            });
+
+        const searchBar = document.getElementById(
+            "searchProcess",
+        ) as HTMLInputElement;
+        searchBar?.addEventListener("input", () => {
+            currentSearch = searchBar.value.toLowerCase().trim();
+            const rows = document.querySelectorAll(
+                "table tbody tr.process",
+            ) as NodeListOf<HTMLTableRowElement>;
+            searchFilter(rows, currentSearch);
+        });
+
+        initKeyboardNavigation({
+            rowSelector: "table tbody tr.process",
+            getItemIdentity: (row) => ({
+                pid: row.getAttribute("data-pid"),
+            }),
+        });
+
+        document.addEventListener("click", (event) => {
+            if (event.target !== menuElement) {
+                menuElement?.classList.remove("active");
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            menuElement?.classList.remove("active");
+            container?.querySelectorAll("tr.selected").forEach((r) => {
+                r.classList.remove("selected");
+            });
+        });
+    });
+
+    function processesEqual(
+        a: Map<Number, String>,
+        b: Map<Number, String>,
+    ): boolean {
+        if (a.size !== b.size) return false;
+
+        for (const [pid, name] of a) {
+            if (b.get(pid) !== name) return false;
+        }
+
+        return true;
+    }
+
+    function reorderRows(processes: ProcessInfo[]) {
+        const tbody = document.querySelector("#process-list tbody");
+        if (!tbody) return;
+        for (const p of sortProcesses(processes)) {
+            const row = tbody.querySelector(`.process[data-pid="${p.pid}"]`);
+            if (row) tbody.appendChild(row);
+        }
+        updateSortIndicators(sortKey, sortDir);
+    }
+
+    const defaultsWithoutIcon = new Set<String>([
+        "svchost.exe",
+        "RuntimeBroker.exe",
+        "taskhostw.exe",
+        "smss.exe",
+        "csrss.exe",
+        "wininit.exe",
+        "winlogon.exe",
+        "lsass.exe",
+        "services.exe",
+        "sihost.exe",
+        "ctfmon.exe",
+        "conhost.exe",
+        "dllhost.exe",
+        "fontdrvhost.exe",
+        "wmiprvse.exe",
+        "MsMpEng.exe",
+        "SearchIndexer.exe",
+        "audiodg.exe",
+        "spoolsv.exe",
+    ]);
+
+    function processesNeedingIcons(
+        oldProcesses: ProcessInfo[],
+        newProcesses: ProcessInfo[],
+    ): ProcessInfo[] {
+        const oldByPid = new Map(oldProcesses.map((p) => [p.pid, p]));
+
+        return newProcesses.filter((p) => {
+            if (!p.exe_path) return false;
+
+            if (defaultsWithoutIcon.has(p.name)) {
+                return false;
+            }
+
+            const old = oldByPid.get(p.pid);
+            if (old && old.exe_path === p.exe_path)
+                return !iconCache.has(p.exe_path);
+
+            return true;
+        });
+    }
+
+    function updateProcessesRows(processes: ProcessInfo[]) {
+        processes.map((p) => {
+            const row = document.querySelector(
+                `tr.process[data-pid="${p.pid}"]`,
+            );
+            if (!row) return;
+
+            if (row.getAttribute("data-name") !== p.name) {
+                const rowName = row.querySelector(".name span");
+                if (rowName) rowName.textContent = p.name;
+                row.setAttribute("data-name", p.name);
+            }
+
+            if (row.getAttribute("data-path") !== p.exe_path) {
+                if (p.exe_path) row.setAttribute("data-path", p.exe_path);
+            }
+
+            const rowAffinity = row.querySelector(".affinity");
+            const newAffinity = formatAffinity(p.affinity);
+            if (rowAffinity && rowAffinity.textContent !== newAffinity) {
+                rowAffinity.textContent = newAffinity;
+            }
+            const rowPriority = row.querySelector(".priority");
+            const prioritySpan = rowPriority?.querySelector("span");
+            const newPriority = CPU_PRIORITY_LABELS[p.priority] ?? p.priority;
+            if (
+                rowPriority &&
+                prioritySpan &&
+                prioritySpan.textContent !== newPriority
+            ) {
+                rowPriority.setAttribute("data-priority", String(p.priority));
+                prioritySpan.textContent = newPriority;
+            }
+
+            const rowCpu = row.querySelector(".cpu");
+            const newCpu = `${p.cpu.toFixed(1)}%`;
+            if (rowCpu && rowCpu.textContent !== newCpu) {
+                rowCpu.textContent = newCpu;
+            }
+        });
+    }
+
+    async function loadProcesses() {
+        const rawProcesses = await invoke<RawProcessInfo[]>("get_process_list");
+        const newProcesses = mergeProcessList(rawProcesses);
+        let newPidsSet = new Map<number, string>();
+
+        newProcesses.forEach((process) =>
+            newPidsSet.set(process.pid, process.name),
+        );
+
+        if (processesEqual(currentPidsSet, newPidsSet)) {
+            updateProcessesRows(newProcesses);
+            reorderRows(newProcesses);
+
+            lastProcesses = newProcesses;
+            currentPidsSet = newPidsSet;
+            return;
+        }
+
+        const iconsToFetch = processesNeedingIcons(lastProcesses, newProcesses);
+        lastProcesses = newProcesses;
+        currentPidsSet = newPidsSet;
+
+        renderProcesses(lastProcesses);
+        loadIcons(iconsToFetch);
+    }
+
+    await invoke("reset_process_cache");
+    await loadProcesses();
+    await getRules();
+
+    const settings = new LazyStore("settings.json");
+    const tabs = document.querySelectorAll(".sidebar-entry");
+    let polling = await settings.get<number>("polling");
+    let interval = setInterval(loadProcesses, polling ?? 2000) as ReturnType<
+        typeof setInterval
+    >;
+
+    tabs.forEach((tab) => {
+        tab.addEventListener("click", async () => {
+            // @ts-ignore
+            if (globalThis.currentTab !== 0) {
+                clearInterval(interval);
+            }
+            // @ts-ignore
+            if (globalThis.currentTab === 0) {
+                interval = setInterval(loadProcesses, polling ?? 2000);
+            }
+        });
+    });
+
+    settings.onChange(async () => {
+        clearInterval(interval);
+        polling = await settings.get<number>("polling");
+    });
+
+    always.onChange(async () => {
+        await getRules();
+        renderProcesses(lastProcesses);
+    });
+</script>
+
+<style is:global>
+    td.priority span {
+        padding: 0.25rem 0.5rem;
+        border-radius: 5px;
+    }
+    td.priority[data-priority="-10"] span,
+    td.priority[data-priority="-20"] span {
+        background: #35141c;
+        color: #ff2056;
+    }
+
+    td.priority[data-priority="-5"] span {
+        background: #35260f;
+        color: #fe9a00;
+    }
+    td.priority[data-priority="-1"] span,
+    td.priority[data-priority="0"] span,
+    td.priority[data-priority="10"] span,
+    td.priority[data-priority="19"] span {
+        background: var(--border);
+        color: var(--muted);
+    }
+    td.priority[data-priority="10"] span,
+    td.priority[data-priority="19"] span {
+        color: #858585;
+    }
+    @media (prefers-color-scheme: light) {
+        td.priority span {
+            padding: 0.25rem 0.5rem;
+            border-radius: 5px;
+        }
+        td.priority[data-priority="-10"] span,
+        td.priority[data-priority="-20"] span {
+            background: #f2e3e7;
+            color: #c20030;
+        }
+
+        td.priority[data-priority="-5"] span {
+            background: #f4ece1;
+            color: #d68100;
+        }
+        td.priority[data-priority="-1"] span,
+        td.priority[data-priority="0"] span,
+        td.priority[data-priority="10"] span,
+        td.priority[data-priority="19"] span {
+            background: var(--border);
+            color: var(--muted);
+        }
+        td.priority[data-priority="10"] span,
+        td.priority[data-priority="19"] span {
+            color: #7a7a7a;
+        }
+    }
+</style>

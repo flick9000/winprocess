@@ -1,0 +1,101 @@
+<footer id="statusbar">
+    <div>
+        CPU: <span id="statusbar-cpu"></span>
+    </div>
+    <div>
+        RAM: <span id="statusbar-ram"></span>
+    </div>
+    <div>
+        Uptime: <span id="statusbar-uptime"></span>
+    </div>
+    <div>
+        OS: <span id="statusbar-os"></span>
+    </div>
+    <div>
+        Version: <span id="statusbar-winprocess"></span>
+    </div>
+</footer>
+
+<script>
+    import { invoke } from "@tauri-apps/api/core";
+    import { app } from "@tauri-apps/api";
+    const appVer = await app.getVersion();
+
+    let cpu = document.getElementById("statusbar-cpu");
+    let ram = document.getElementById("statusbar-ram");
+    let uptime = document.getElementById("statusbar-uptime");
+    let os = document.getElementById("statusbar-os");
+    const version = document.getElementById("statusbar-winprocess");
+
+    if (version) {
+        version.textContent = appVer;
+    }
+
+    interface SystemStats {
+        cpu_usage: number;
+        ram_total: number;
+        ram_used: number;
+        ram_percentage: number;
+        uptime: number;
+        os_name: string;
+    }
+
+    async function setOs() {
+        const stats = await invoke<SystemStats>("get_system_stats");
+        if (!os) return;
+
+        os.textContent = stats.os_name;
+    }
+
+    await setOs();
+
+    async function updateStats() {
+        try {
+            if (!cpu || !ram || !uptime) return;
+            const stats = await invoke<SystemStats>("get_system_stats");
+            const cpuUsage = stats.cpu_usage.toFixed(1);
+            const ramPercentage = stats.ram_percentage.toFixed(1);
+            const uptimeTime = new Date(stats.uptime * 1000)
+                .toISOString()
+                .slice(11, 19);
+
+            cpu.textContent = `${cpuUsage}%`;
+            ram.textContent = `${ramPercentage}%`;
+            uptime.textContent = uptimeTime;
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    updateStats();
+    setInterval(updateStats, 1000);
+</script>
+
+<style>
+    #statusbar {
+        width: 100%;
+        height: 32px;
+        background-color: var(--elevated);
+        border-top: 1px solid var(--border);
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-inline: 1.5rem;
+        font-size: var(--font-sm);
+        color: var(--muted);
+    }
+    div {
+        text-wrap: nowrap;
+        text-align: center;
+        min-width: 100px;
+        &:first-child {
+            text-align: left;
+        }
+        &:last-child {
+            text-align: right;
+        }
+    }
+</style>

@@ -1,0 +1,506 @@
+---
+import MenuItem from "./MenuItem.astro";
+import TableHead from "./TableHead.astro";
+import { STATIC_MENUS } from "../utils/menu";
+import {
+    ArrowDown10,
+    Clipboard,
+    Cog,
+    Copy,
+    Cpu,
+    Folder,
+    Gpu,
+    HardDrive,
+    MemoryStick,
+    MonitorCog,
+    Rocket,
+    Trash,
+    Zap,
+} from "@lucide/astro";
+
+const tableHeader = [
+    { dataSort: "name", text: "Name" },
+    { dataSort: "path", text: "Path" },
+    { dataSort: "type", text: "Type" },
+    { dataSort: "value", text: "Value" },
+];
+---
+
+<div id="rules-list">
+    <TableHead tableClass="rule-table" Items={tableHeader}>
+        <tbody id="rule-rows"></tbody>
+    </TableHead>
+</div>
+
+<div id="ruleMenu" class="menu">
+    <MenuItem id="ruleName" label="Name:" disabled dropdown={false} />
+    <MenuItem
+        id="ruleCpuAffinity"
+        icon={ArrowDown10}
+        label="CPU Affinity"
+        dropdown={false}
+    />
+    <MenuItem
+        id="ruleCpuPriority"
+        icon={Cpu}
+        label="CPU Priority"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.cpu}
+    />
+    <MenuItem
+        id="ruleIoPriority"
+        icon={HardDrive}
+        label="I/O Priority"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.io}
+    />
+    <MenuItem
+        id="ruleGpuPriority"
+        icon={Gpu}
+        label="GPU Priority"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.gpu}
+    />
+    <MenuItem
+        id="ruleGpuPreference"
+        icon={MonitorCog}
+        label="GPU Preference"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.gpu_preference}
+    />
+    <MenuItem
+        id="ruleMemoryPriority"
+        icon={MemoryStick}
+        label="Memory Priority"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.mem}
+    />
+    <MenuItem
+        id="rulePlan"
+        containerClass="plans-container"
+        icon={Zap}
+        label="Induce Power Plan"
+        dropdown
+        onlyLevel
+        items={[]}
+    />
+    <MenuItem
+        id="ruleEfficiency"
+        icon={Cog}
+        label="Efficiency Mode"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.efficiency}
+    />
+    <MenuItem
+        id="ruleBoost"
+        icon={Rocket}
+        label="Boost"
+        dropdown
+        onlyLevel
+        items={STATIC_MENUS.boost}
+    />
+    <hr />
+    <MenuItem
+        id="ruleCopyRule"
+        icon={Copy}
+        label="Copy Rule"
+        dropdown={false}
+    />
+    <MenuItem
+        id="rulePasteRule"
+        icon={Clipboard}
+        label="Paste Rule"
+        dropdown={false}
+    />
+    <MenuItem
+        id="ruleRemoveRule"
+        icon={Trash}
+        label="Remove Rule"
+        dropdown={false}
+    />
+    <hr />
+    <MenuItem id="ruleLocate" icon={Folder} label="Locate" dropdown={false} />
+</div>
+
+<script>
+    import { LazyStore } from "@tauri-apps/plugin-store";
+    import { locatePath } from "../utils/scripts";
+    import { updateSortIndicators } from "../utils/sort";
+    import { searchFilter } from "../utils/search";
+    import { setMenuPosition } from "../utils/menu";
+    import { loadPowerPlans } from "../utils/powerplans";
+    import { fetchAndApplyIcon } from "../utils/icons";
+    import { initKeyboardNavigation } from "../utils/kbnavigation";
+
+    const always = new LazyStore("always.json");
+
+    interface Rule {
+        name: string;
+        path: string;
+        type: string;
+        value: string;
+    }
+
+    let rules: Rule[] = [];
+    const iconCache = new Map<string, string>();
+
+    type SortKey = "name" | "path" | "type" | "value";
+    type SortDir = "asc" | "desc";
+    let sortKey: SortKey = "name";
+    let sortDir: SortDir = "asc";
+    let lastRules: Rule[] = [];
+
+    let copiedRule: { key: string; value: string } | null = null;
+    let currentName: string | null = null;
+    let currentPath: string | null = null;
+    let currentType: string | null = null;
+    let currentSearch = "";
+
+    async function syncMenuChecks(path: string) {
+        const process = lastRules.find((r) => r.path === path);
+        if (!process) return;
+
+        const allChecked = document.querySelectorAll(
+            "#ruleMenu .checked:has(img)",
+        ) as NodeListOf<HTMLDivElement>;
+        allChecked.forEach((check) => {
+            check.style.opacity = "0";
+        });
+
+        const allRules = await always.keys();
+        const rules = (
+            await Promise.all(
+                allRules
+                    .filter((rule) => rule.startsWith(`${process.name}_`))
+                    .map(async (rule) => {
+                        const stored = await always.get<{ value: string }>(
+                            rule,
+                        );
+                        return stored
+                            ? {
+                                  key: rule.replace(`${process.name}_`, ""),
+                                  value: stored.value,
+                              }
+                            : null;
+                    }),
+            )
+        ).filter(
+            (entry): entry is { key: string; value: string } => entry !== null,
+        );
+
+        function setChecked(
+            mode: "current" | "always",
+            type: string,
+            value: string,
+        ) {
+            const button = document.querySelector(
+                `#ruleMenu ul.${mode} button[data-type="${type}"][data-value="${value}"]`,
+            );
+            const li = button?.closest("li");
+            const checked = li?.querySelector(".checked") as HTMLDivElement;
+            checked.style.opacity = "1";
+        }
+
+        for (const rule of rules) {
+            if (rule.key === "cpu_affinity") continue;
+            setChecked("always", rule.key, rule.value);
+        }
+    }
+
+    function sortRules(entries: Rule[]): Rule[] {
+        return [...entries].sort((a, b) => {
+            let cmp = 0;
+
+            switch (sortKey) {
+                case "name":
+                    cmp = a.name.localeCompare(b.name);
+                    break;
+
+                case "path":
+                    cmp = a.path.localeCompare(b.path);
+                    break;
+
+                case "type":
+                    cmp = a.type.localeCompare(b.type);
+                    break;
+
+                case "value":
+                    cmp = a.value.localeCompare(b.value);
+                    break;
+            }
+
+            return sortDir === "asc" ? cmp : -cmp;
+        });
+    }
+
+    function renderRules(rulesList: Rule[]): void {
+        const container = document.getElementById("rule-rows");
+        if (!container) return;
+
+        const sortedRules = sortRules(rulesList);
+
+        const rowsHtml = sortedRules
+            .map((r) => {
+                const currentIcon = r.path ? iconCache.get(r.path) : undefined;
+
+                return `
+        <tr class="rule" data-type="${r.type}" data-name="${r.name}" data-path="${r.path}">
+          <td>
+            <div class="name">
+              <img width="20px" height="20px" class="rule-icon" src="${currentIcon ?? "/rules.svg"}" alt="" />
+              <span>${r.name}</span>
+            </div>
+          </td> 
+          <td class="path">${r.path}</td>
+          <td class="type">${r.type}</td>
+          <td class="value">${r.value}</td>
+        </tr>
+        `;
+            })
+            .join("");
+
+        container.innerHTML = rowsHtml;
+
+        updateSortIndicators(sortKey, sortDir);
+        const rows = document.querySelectorAll(
+            "table tbody tr.rule",
+        ) as NodeListOf<HTMLTableRowElement>;
+        searchFilter(rows, currentSearch);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const container = document.getElementById("rules-list");
+        const menuElement = document.getElementById("ruleMenu");
+
+        const plansContainer = document.querySelector(
+            "#ruleMenu .plans-container",
+        );
+
+        await loadPowerPlans(plansContainer);
+
+        const newRuleButton = document.getElementById("newRuleButton");
+        newRuleButton?.addEventListener("click", () => {
+            const ruleDialog = document.querySelector(
+                ".rule-dialog",
+            ) as HTMLDialogElement;
+            ruleDialog.dispatchEvent(new Event("open"));
+        });
+
+        container?.addEventListener("click", async (event) => {
+            const th = (event.target as HTMLElement).closest("th[data-sort]");
+            const row = (event.target as HTMLElement).closest("tr");
+
+            if (row) {
+                container?.querySelectorAll("tr.selected").forEach((r) => {
+                    r.classList.remove("selected");
+                });
+                row.classList.add("selected");
+            }
+
+            if (th) {
+                const key = th.getAttribute("data-sort") as SortKey;
+                if (key === sortKey) {
+                    sortDir = sortDir === "asc" ? "desc" : "asc";
+                } else {
+                    sortKey = key;
+                    sortDir = "desc";
+                }
+                renderRules(lastRules);
+                loadIcons(lastRules);
+            }
+        });
+        const handleMenuOpen = async (event: MouseEvent) => {
+            setMenuPosition(menuElement, event);
+
+            const row = (event.target as HTMLElement).closest(".rule");
+            if (!row) return;
+            const type = row.querySelector(".type")?.textContent;
+            const name = row.getAttribute("data-name");
+            const path = row.getAttribute("data-path");
+
+            if (!name || !path || !type) return;
+            currentName = name;
+            currentPath = path;
+            currentType = type;
+
+            const ruleName = document.getElementById("ruleName");
+            if (ruleName) {
+                ruleName.textContent = name;
+            }
+
+            await syncMenuChecks(currentPath);
+        };
+
+        container?.addEventListener("contextmenu", handleMenuOpen);
+        container?.addEventListener("dblclick", (event) => {
+            const row = (event.target as HTMLElement).closest("tr.rule");
+            if (row) {
+                handleMenuOpen(event);
+            }
+        });
+
+        document
+            .querySelector(".menu-item:has(#ruleCpuAffinity)")
+            ?.addEventListener("click", async () => {
+                const affinityDialog = document.querySelector(
+                    "#ruleAffinityDialog",
+                ) as HTMLDialogElement;
+                affinityDialog.dataset.type = String(currentType);
+                affinityDialog.dataset.name = String(currentName);
+                affinityDialog.dataset.path = String(currentPath);
+                affinityDialog.dispatchEvent(new Event("open"));
+            });
+
+        const nestedButtons = document.querySelectorAll(
+            "#ruleMenu .nested-button",
+        );
+        nestedButtons.forEach((button) => {
+            const menuItem = button.closest("li");
+            menuItem?.addEventListener("click", async () => {
+                const type = button.getAttribute("data-type");
+                const value = button.getAttribute("data-value");
+                const mode = "always";
+
+                console.log(type, value, mode, currentName);
+                if (!type || !value || !mode) return;
+
+                if (mode === "always") {
+                    always.set(`${currentName}_${type}`, {
+                        path: currentPath,
+                        type: type,
+                        value: value,
+                    });
+                    await always.save();
+                }
+            });
+        });
+
+        interface itemRule {
+            type: string;
+            value: string;
+        }
+
+        document
+            .querySelector(".menu-item:has(#ruleCopyRule)")
+            ?.addEventListener("click", async () => {
+                const itemRule = (await always.get(
+                    `${currentName}_${currentType}`,
+                )) as itemRule;
+                copiedRule = {
+                    key: itemRule.type,
+                    value: itemRule.value,
+                };
+            });
+
+        document
+            .querySelector(".menu-item:has(#rulePasteRule)")
+            ?.addEventListener("click", async () => {
+                if (!copiedRule) return;
+                always.set(`${currentName}_${copiedRule.key}`, {
+                    path: currentPath,
+                    type: copiedRule.key,
+                    value: copiedRule.value,
+                });
+
+                await always.save();
+            });
+
+        document
+            .querySelector(".menu-item:has(#ruleRemoveRule)")
+            ?.addEventListener("click", async () => {
+                await always.delete(`${currentName}_${currentType}`);
+                await always.save();
+            });
+
+        document
+            .querySelector(".menu-item:has(#ruleLocate)")
+            ?.addEventListener("click", async () => {
+                if (!currentPath) return;
+                locatePath(currentPath);
+            });
+
+        const searchBar = document.getElementById(
+            "searchRule",
+        ) as HTMLInputElement;
+        searchBar?.addEventListener("input", () => {
+            currentSearch = searchBar.value.toLowerCase().trim();
+            const rows = document.querySelectorAll(
+                "table tbody tr.rule",
+            ) as NodeListOf<HTMLTableRowElement>;
+            searchFilter(rows, currentSearch);
+        });
+
+        initKeyboardNavigation({
+            rowSelector: "table tbody tr.rule",
+            getItemIdentity: (row) => ({
+                path: row.getAttribute("data-command"),
+                type: row.getAttribute("data-type"),
+            }),
+        });
+
+        document.addEventListener("click", (event) => {
+            if (event.target !== menuElement) {
+                menuElement?.classList.remove("active");
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            menuElement?.classList.remove("active");
+            container?.querySelectorAll("tr.selected").forEach((r) => {
+                r.classList.remove("selected");
+            });
+        });
+    });
+
+    async function loadIcons(rules: Rule[]) {
+        const promises = rules.map(async (rule) => {
+            const img = document.querySelector<HTMLImageElement>(
+                `.rule[data-type="${rule.type}"][data-name="${rule.name}"] .rule-icon`,
+            );
+
+            if (!rule.path || !img) return;
+
+            fetchAndApplyIcon(rule.path, img, iconCache);
+        });
+        await Promise.all(promises);
+    }
+
+    async function getRules() {
+        const keys = await always.keys();
+
+        const fetchPromises = keys.map(async (key) => {
+            let item = await always.get<Rule>(key);
+            if (!item) return null;
+            const namedItem = {
+                ...item,
+                name: key.replace(`_${item.type}`, ""),
+            };
+            return namedItem;
+        });
+
+        const resolvedItems = await Promise.all(fetchPromises);
+
+        rules = resolvedItems.filter(
+            (item): item is Rule => item !== null && item !== undefined,
+        );
+
+        renderRules(rules);
+        loadIcons(rules);
+
+        lastRules = rules;
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        await getRules();
+
+        always.onChange(() => {
+            getRules();
+        });
+    });
+</script>

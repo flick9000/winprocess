@@ -1,0 +1,40 @@
+{
+    "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+    "productName": "WinProcess",
+    "version": "1.0.0",
+    "identifier": "flick.winprocess.dev",
+    "build": {
+        "frontendDist": "../dist",
+        "devUrl": "http://localhost:4321/",
+        "beforeDevCommand": "npm run astro dev",
+        "beforeBuildCommand": "npm run astro build",
+        "removeUnusedCommands": true
+    },
+    "app": {
+        "windows": [],
+        "security": {
+            "csp": null
+        }
+    },
+    "bundle": {
+        "publisher": "flick9000",
+        "active": true,
+        "targets": "all",
+        "icon": ["icons/icon.ico"],
+        "createUpdaterArtifacts": true,
+        "windows": {
+            "nsis": {
+                "installerIcon": "icons/icon.ico",
+                "uninstallerIcon": "icons/icon.ico"
+            }
+        }
+    },
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZGQzkxRjFFODYxQTU0OQpSV1JKcFdIbzhaSDhEK3BWcTRmSXdjVUlUK2hNNTl1ZVVhOEZHL2xPWjQ1WXN0MllRWDVEaXhpbwo=",
+            "endpoints": [
+                "https://github.com/flick9000/winprocess/releases/latest/download/latest.json"
+            ]
+        }
+    }
+}

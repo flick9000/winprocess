@@ -1,0 +1,378 @@
+---
+import MenuItem from "./MenuItem.astro";
+import TableHead from "./TableHead.astro";
+
+import { Play, ToggleRight, Trash } from "@lucide/astro";
+
+const tableHeader = [
+    { dataSort: "name", text: "Name" },
+    { dataSort: "author", text: "Author" },
+    { dataSort: "state", text: "State" },
+    { dataSort: "enabled", text: "Startup" },
+    { dataSort: "last_run_time", text: "Last Run" },
+];
+---
+
+<div id="task-list">
+    <TableHead tableClass="task-table" Items={tableHeader}>
+        <tbody id="task-rows"></tbody>
+    </TableHead>
+</div>
+
+<div id="taskMenu" class="menu">
+    <MenuItem id="taskName" disabled label="Name:" dropdown={false} />
+    <MenuItem icon={Play} id="toggleTaskState" label="Run" dropdown={false} />
+    <MenuItem
+        icon={ToggleRight}
+        id="toggleTaskStartup"
+        label="Disable"
+        dropdown={false}
+    />
+    <MenuItem icon={Trash} id="deleteTask" label="Delete" dropdown={false} />
+</div>
+
+<script>
+    import { invoke } from "@tauri-apps/api/core";
+    import { updateSortIndicators } from "../utils/sort";
+    import { searchFilter } from "../utils/search";
+    import { setMenuPosition } from "../utils/menu";
+
+    import {
+        toggleScheduledTask,
+        deleteScheduledTask,
+        actionScheduledTask,
+    } from "../utils/scripts";
+    import { initKeyboardNavigation } from "../utils/kbnavigation";
+
+    interface ScheduledTaskInfo {
+        name: string;
+        path: string;
+        state: string;
+        enabled: boolean;
+        author: string;
+        last_run_time: string | null;
+    }
+
+    const TASK_STATUS: Record<string, string> = {
+        "TASK_STATE(0)": "Unknown",
+        "TASK_STATE(1)": "Disabled",
+        "TASK_STATE(2)": "Queued",
+        "TASK_STATE(3)": "Ready",
+        "TASK_STATE(4)": "Running",
+    };
+
+    let currentName: string | null = null;
+    let currentPath: string | null = null;
+    let currentEnabled: string | null = null;
+    let currentStatus: string | null = null;
+    let currentSearch = "";
+
+    type SortKey = "name" | "author" | "state" | "enabled" | "last_run_time";
+    type SortDir = "asc" | "desc";
+    let sortKey: SortKey = "name";
+    let sortDir: SortDir = "asc";
+
+    let lastTasks: ScheduledTaskInfo[] = [];
+
+    function formatDate(date: string | null): string {
+        if (!date) return "—";
+        const parsed = new Date(date);
+        if (isNaN(parsed.getTime())) return date;
+        return parsed.toLocaleDateString();
+    }
+
+    function formatAuthor(author: string): string {
+        if (author.startsWith("Microsoft") || author.startsWith("$")) {
+            return "Microsoft";
+        }
+        if (author.startsWith("DESKTOP")) {
+            return "User";
+        }
+        if (author === "Advanced Micro Devices") {
+            return "AMD";
+        }
+        return author;
+    }
+
+    function sortTasks(tasks: ScheduledTaskInfo[]): ScheduledTaskInfo[] {
+        return [...tasks].sort((a, b) => {
+            let valA =
+                sortKey === "author"
+                    ? formatAuthor(a.author)
+                    : String(a[sortKey] ?? "");
+            let valB =
+                sortKey === "author"
+                    ? formatAuthor(b.author)
+                    : String(b[sortKey] ?? "");
+
+            if (sortKey === "state") {
+                valA =
+                    a.state === "TASK_STATE(1)"
+                        ? ""
+                        : (TASK_STATUS[a.state] ?? a.state);
+                valB =
+                    b.state === "TASK_STATE(1)"
+                        ? ""
+                        : (TASK_STATUS[b.state] ?? b.state);
+            }
+
+            if (!valA && valB) return 1;
+            if (valA && !valB) return -1;
+
+            let cmp = 0;
+            if (sortKey === "enabled") {
+                cmp = Number(a.enabled) - Number(b.enabled);
+            } else if (sortKey === "last_run_time") {
+                cmp =
+                    new Date(a.last_run_time ?? 0).getTime() -
+                    new Date(b.last_run_time ?? 0).getTime();
+            } else {
+                cmp = valA.localeCompare(valB);
+            }
+
+            return sortDir === "asc" ? cmp : -cmp;
+        });
+    }
+
+    function renderTasks(tasks: ScheduledTaskInfo[]) {
+        const container = document.getElementById("task-rows");
+        if (!container) return;
+
+        const sortedTasks = sortTasks(tasks);
+
+        const rowsHtml = sortedTasks
+            .map((t) => {
+                let stateLabel = t.state === "TASK_STATE(1)" ? "" : t.state;
+                return `
+                <tr class="task" data-name="${t.name}" data-path="${t.path}" data-state=${t.state} data-enabled="${t.enabled}">
+                  <td>
+                    <div class="name">
+                      <img width="20px" height="20px" class="task-icon" src="/task.svg" />
+                      <div class="task-meta">
+                        <span class="task-name">${t.name}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="author" data-author="${t.author}">
+                    ${formatAuthor(t.author)}
+                  </td>
+                  <td class="state" data-state="${t.state}">
+                    ${TASK_STATUS[stateLabel] ?? stateLabel}
+                  </td>
+                  <td class="enabled" data-enabled="${t.enabled}">
+                    ${t.enabled ? "Enabled" : "Disabled"}
+                  </td>
+                  <td class="last-run">
+                    ${formatDate(t.last_run_time)}
+                  </td>
+                </tr>
+                `;
+            })
+            .join("");
+
+        container.innerHTML = rowsHtml;
+
+        updateSortIndicators(sortKey, sortDir);
+        const rows = document.querySelectorAll(
+            "table tbody tr.task",
+        ) as NodeListOf<HTMLTableRowElement>;
+        searchFilter(rows, currentSearch);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document
+            .getElementById("tasksRefresh")
+            ?.addEventListener("click", () => {
+                const hideMicrosoft = document.getElementById(
+                    "hideMicrosoft",
+                ) as HTMLInputElement;
+                hideMicrosoft.checked = false;
+                hideMicrosoft.dispatchEvent(new Event("change"));
+
+                refreshTasks();
+            });
+
+        document
+            .getElementById("hideMicrosoft")
+            ?.addEventListener("change", (e) => {
+                const checkbox = e.target as HTMLInputElement;
+                const rows = document.querySelectorAll(
+                    "table tbody tr.task",
+                ) as NodeListOf<HTMLTableRowElement>;
+
+                if (checkbox.checked) {
+                    rows.forEach((row) => {
+                        if (
+                            row
+                                .getAttribute("data-path")
+                                ?.startsWith("\\Microsoft")
+                        ) {
+                            row.style.display = "none";
+                        }
+                    });
+                } else {
+                    rows.forEach((row) => {
+                        row.style.display = "";
+                    });
+                }
+            });
+
+        const container = document.getElementById("task-list");
+        const menuElement = document.getElementById("taskMenu");
+
+        container?.addEventListener("click", (event) => {
+            const th = (event.target as HTMLElement).closest("th[data-sort]");
+            const row = (event.target as HTMLElement).closest("tr");
+
+            if (row) {
+                container.querySelectorAll("tr.selected").forEach((r) => {
+                    r.classList.remove("selected");
+                });
+                row.classList.add("selected");
+            }
+
+            if (th) {
+                const key = th.getAttribute("data-sort") as SortKey;
+                if (key === sortKey) {
+                    sortDir = sortDir === "asc" ? "desc" : "asc";
+                } else {
+                    sortKey = key;
+                    sortDir = "desc";
+                }
+                renderTasks(lastTasks);
+            }
+        });
+
+        const handleMenuOpen = async (event: MouseEvent) => {
+            setMenuPosition(menuElement, event);
+
+            const row = (event.target as HTMLElement).closest(".task");
+            if (!row) return;
+            const name = row.getAttribute("data-name");
+            const path = row.getAttribute("data-path");
+            const enabled = row.getAttribute("data-enabled");
+            const status = row.getAttribute("data-state");
+
+            if (!name || !path || !enabled || !status) return;
+
+            const formattedStatus = TASK_STATUS[status];
+
+            currentName = name;
+            currentPath = path;
+            currentEnabled = enabled;
+            currentStatus = formattedStatus;
+
+            const taskName = document.getElementById("taskName");
+            const toggleTaskState = document.getElementById("toggleTaskState");
+            const toggleTaskStartup =
+                document.getElementById("toggleTaskStartup");
+
+            if (!taskName || !toggleTaskState || !toggleTaskStartup) return;
+            // set items labels
+            const truncatedName =
+                name.length > 24 ? `${name.substring(0, 24)}...` : name;
+            taskName.textContent = "Task: " + truncatedName;
+            toggleTaskState.textContent =
+                formattedStatus === "Running" ? "End" : "Run";
+            toggleTaskStartup.textContent =
+                enabled === "true" ? "Disable" : "Enable";
+        };
+
+        container?.addEventListener("contextmenu", handleMenuOpen);
+        container?.addEventListener("dblclick", (event) => {
+            const row = (event.target as HTMLElement).closest("tr.task");
+            if (row) {
+                handleMenuOpen(event);
+            }
+        });
+
+        // items actions
+        document
+            .querySelector(".menu-item:has(#toggleTaskState)")
+            ?.addEventListener("click", async () => {
+                if (currentEnabled === "false") {
+                    await toggleScheduledTask(
+                        currentName,
+                        currentPath,
+                        currentEnabled,
+                    );
+                }
+                await actionScheduledTask(
+                    currentName,
+                    currentPath,
+                    currentEnabled,
+                    currentStatus,
+                );
+                refreshTasks();
+            });
+
+        document
+            .querySelector(".menu-item:has(#toggleTaskStartup)")
+            ?.addEventListener("click", async () => {
+                await toggleScheduledTask(
+                    currentName,
+                    currentPath,
+                    currentEnabled,
+                );
+                refreshTasks();
+            });
+
+        document
+            .querySelector(".menu-item:has(#deleteTask)")
+            ?.addEventListener("click", async () => {
+                await deleteScheduledTask(currentName, currentPath);
+                refreshTasks();
+            });
+
+        const searchBar = document.getElementById(
+            "searchTask",
+        ) as HTMLInputElement;
+        searchBar?.addEventListener("input", () => {
+            currentSearch = searchBar.value.toLowerCase().trim();
+            const rows = document.querySelectorAll(
+                "table tbody tr.task",
+            ) as NodeListOf<HTMLTableRowElement>;
+            searchFilter(rows, currentSearch);
+        });
+
+        initKeyboardNavigation({
+            rowSelector: "table tbody tr.task",
+            getItemIdentity: (row) => ({
+                path: row.getAttribute("data-path"),
+            }),
+        });
+
+        document.addEventListener("click", (event) => {
+            if (event.target !== menuElement) {
+                menuElement?.classList.remove("active");
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            menuElement?.classList.remove("active");
+            container?.querySelectorAll("tr.selected").forEach((r) => {
+                r.classList.remove("selected");
+            });
+        });
+    });
+
+    async function refreshTasks() {
+        lastTasks = await invoke<ScheduledTaskInfo[]>(
+            "refresh_scheduled_tasks",
+        );
+        renderTasks(lastTasks);
+    }
+
+    async function loadTasks() {
+        lastTasks = await invoke<ScheduledTaskInfo[]>("get_scheduled_tasks");
+        renderTasks(lastTasks);
+    }
+
+    loadTasks();
+</script>
+
+<style is:global>
+    td.author {
+        max-width: 0;
+    }
+</style>
