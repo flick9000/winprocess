@@ -523,7 +523,9 @@ const tableHeader = [
                 const formattedRules = rules.join("");
 
                 if (formattedRules === "") {
-                    return;
+                    ruleCache.delete(p.exe_path);
+                } else {
+                    ruleCache.set(p.exe_path, formattedRules);
                 }
 
                 ruleCache.set(p.exe_path, formattedRules);
