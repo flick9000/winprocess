@@ -160,6 +160,7 @@ const tableHeader = [
             "table tbody tr.task",
         ) as NodeListOf<HTMLTableRowElement>;
         searchFilter(rows, currentSearch);
+        hideMicrosoft();
     }
 
     function hideMicrosoft() {
@@ -187,7 +188,6 @@ const tableHeader = [
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("tasksRefresh")?.addEventListener("click", async () => {
             await refreshTasks();
-            hideMicrosoft();
         });
 
         document.getElementById("hideMicrosoft")?.addEventListener("change", () => {
@@ -268,7 +268,6 @@ const tableHeader = [
                 }
                 await actionScheduledTask(currentName, currentPath, currentEnabled, currentStatus);
                 await refreshTasks();
-                hideMicrosoft();
             });
 
         document
@@ -276,7 +275,6 @@ const tableHeader = [
             ?.addEventListener("click", async () => {
                 await toggleScheduledTask(currentName, currentPath, currentEnabled);
                 await refreshTasks();
-                hideMicrosoft();
             });
 
         document
@@ -284,7 +282,6 @@ const tableHeader = [
             ?.addEventListener("click", async () => {
                 await deleteScheduledTask(currentName, currentPath);
                 await refreshTasks();
-                hideMicrosoft();
             });
 
         const searchBar = document.getElementById("searchTask") as HTMLInputElement;
