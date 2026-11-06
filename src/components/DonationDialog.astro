@@ -1,0 +1,60 @@
+<dialog id="supportDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h1>Support WinProcess</h1>
+        </div>
+        <div class="modal-text">
+            <p>
+                If WinProcess has been helpful to you, consider supporting the
+                project. You can star the repository on GitHub, share it with
+                others, or make a donation to help fund ongoing development.
+            </p>
+        </div>
+        <div>
+            <div class="checkbox-wrapper">
+                <label class="switch">
+                    <input id="askSupport" type="checkbox" />
+                    <span class="slider"></span>
+                </label>
+                <span>Don't ask this again</span>
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button id="coffeeButton">Buy me a coffee</button>
+            <button id="exitButton">Exit</button>
+        </div>
+    </div>
+</dialog>
+
+<style>
+    .modal-content {
+        gap: 1rem;
+    }
+</style>
+
+<script>
+    import { open } from "@tauri-apps/plugin-shell";
+    import { getCurrentWindow } from "@tauri-apps/api/window";
+
+    const askSupportInput = document.getElementById(
+        "askSupport",
+    ) as HTMLInputElement;
+    const coffeeButton = document.getElementById("coffeeButton");
+    const exitButton = document.getElementById("exitButton");
+
+    askSupportInput?.addEventListener("change", () => {
+        if (askSupportInput.checked) {
+            localStorage.setItem("askSupport", "false");
+        } else {
+            localStorage.setItem("askSupport", "true");
+        }
+    });
+
+    coffeeButton?.addEventListener("click", () => {
+        open("https://ko-fi.com/flick9000");
+    });
+
+    exitButton?.addEventListener("click", () => {
+        getCurrentWindow().close();
+    });
+</script>
