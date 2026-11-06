@@ -19,7 +19,7 @@
     "bundle": {
         "publisher": "flick9000",
         "active": true,
-        "targets": "all",
+        "targets": ["nsis"],
         "icon": ["icons/icon.ico"],
         "createUpdaterArtifacts": true,
         "windows": {
