@@ -787,6 +787,38 @@ pub struct StartupEntry {
 
 type StateMap = HashMap<String, bool>;
 
+fn read_services() -> Vec<StartupEntry> {
+    const P: &str = r"SYSTEM\CurrentControlSet\Services";
+    let Ok(root) = RegKey::predef(HKEY_LOCAL_MACHINE).open_subkey(P) else {
+        return vec![];
+    };
+    root.enum_keys()
+        .flatten()
+        .filter_map(|name| {
+            let k = root.open_subkey(&name).ok()?;
+            let (start, ty): (u32, u32) = (k.get_value("Start").ok()?, k.get_value("Type").ok()?);
+            let cmd: String = k.get_value("ImagePath").ok()?;
+            let l = cmd.to_ascii_lowercase();
+            if !(2..=4).contains(&start)
+                || ty & 0x30 == 0
+                || l.contains(r"\windows\")
+                || l.contains("systemroot")
+                || l.starts_with("system32")
+            {
+                return None;
+            }
+            let registry_path = Some(format!(r"HKLM\{P}\{name}"));
+            Some(StartupEntry {
+                name,
+                command: cmd,
+                source: "Service".into(),
+                enabled: start != 4,
+                registry_path,
+            })
+        })
+        .collect()
+}
+
 #[tauri::command]
 fn get_startup_entries() -> Vec<StartupEntry> {
     let read_run_key =
@@ -896,7 +928,18 @@ fn get_startup_entries() -> Vec<StartupEntry> {
         "Registry",
         true,
     ));
-
+    entries.extend(read_run_key(
+        HKEY_CURRENT_USER,
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+        "Registry",
+        true,
+    ));
+    entries.extend(read_run_key(
+        HKEY_LOCAL_MACHINE,
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+        "Registry",
+        true,
+    ));
     entries.extend(read_run_key(
         HKEY_LOCAL_MACHINE,
         r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run",
@@ -919,7 +962,7 @@ fn get_startup_entries() -> Vec<StartupEntry> {
     ));
     entries.extend(read_run_key(
         HKEY_LOCAL_MACHINE,
-        r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run\WinProcessDisabled",
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run\AutorunsDisabled",
         "Registry",
         false,
     ));
@@ -931,7 +974,31 @@ fn get_startup_entries() -> Vec<StartupEntry> {
     ));
     entries.extend(read_run_key(
         HKEY_LOCAL_MACHINE,
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run\AutorunsDisabled",
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\WinProcessDisabled",
+        "Registry",
+        false,
+    ));
+    entries.extend(read_run_key(
+        HKEY_CURRENT_USER,
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\WinProcessDisabled",
+        "Registry",
+        false,
+    ));
+    entries.extend(read_run_key(
+        HKEY_LOCAL_MACHINE,
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\AutorunsDisabled",
+        "Registry",
+        false,
+    ));
+    entries.extend(read_run_key(
+        HKEY_CURRENT_USER,
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\AutorunsDisabled",
+        "Registry",
+        false,
+    ));
+    entries.extend(read_run_key(
+        HKEY_LOCAL_MACHINE,
+        r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run\WinProcessDisabled",
         "Registry",
         false,
     ));
@@ -953,6 +1020,7 @@ fn get_startup_entries() -> Vec<StartupEntry> {
         r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup",
         "Startup Folder",
     ));
+    entries.extend(read_services());
 
     // Startup enabled/disabled state overlay (from StartupApproved\Run)
     let states: StateMap = {
