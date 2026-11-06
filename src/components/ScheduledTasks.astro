@@ -303,7 +303,8 @@ const tableHeader = [
                     currentEnabled,
                     currentStatus,
                 );
-                refreshTasks();
+                await refreshTasks();
+                hideMicrosoft();
             });
 
         document
@@ -314,14 +315,16 @@ const tableHeader = [
                     currentPath,
                     currentEnabled,
                 );
-                refreshTasks();
+                await refreshTasks();
+                hideMicrosoft();
             });
 
         document
             .querySelector(".menu-item:has(#deleteTask)")
             ?.addEventListener("click", async () => {
                 await deleteScheduledTask(currentName, currentPath);
-                refreshTasks();
+                await refreshTasks();
+                hideMicrosoft();
             });
 
         const searchBar = document.getElementById(
