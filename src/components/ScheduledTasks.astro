@@ -179,42 +179,42 @@ const tableHeader = [
         searchFilter(rows, currentSearch);
     }
 
+    function hideMicrosoft() {
+        const checkbox = document.getElementById(
+            "hideMicrosoft",
+        ) as HTMLInputElement;
+        const rows = document.querySelectorAll(
+            "table tbody tr.task",
+        ) as NodeListOf<HTMLTableRowElement>;
+
+        if (checkbox.checked) {
+            rows.forEach((row) => {
+                if (row.getAttribute("data-path")?.startsWith("\\Microsoft")) {
+                    row.style.display = "none";
+                    row.classList.add("microsoft");
+                }
+            });
+        } else {
+            rows.forEach((row) => {
+                row.style.display = "";
+                row.classList.remove("microsoft");
+                searchFilter(rows, currentSearch);
+            });
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         document
             .getElementById("tasksRefresh")
-            ?.addEventListener("click", () => {
-                const hideMicrosoft = document.getElementById(
-                    "hideMicrosoft",
-                ) as HTMLInputElement;
-                hideMicrosoft.checked = false;
-                hideMicrosoft.dispatchEvent(new Event("change"));
-
-                refreshTasks();
+            ?.addEventListener("click", async () => {
+                await refreshTasks();
+                hideMicrosoft();
             });
 
         document
             .getElementById("hideMicrosoft")
-            ?.addEventListener("change", (e) => {
-                const checkbox = e.target as HTMLInputElement;
-                const rows = document.querySelectorAll(
-                    "table tbody tr.task",
-                ) as NodeListOf<HTMLTableRowElement>;
-
-                if (checkbox.checked) {
-                    rows.forEach((row) => {
-                        if (
-                            row
-                                .getAttribute("data-path")
-                                ?.startsWith("\\Microsoft")
-                        ) {
-                            row.style.display = "none";
-                        }
-                    });
-                } else {
-                    rows.forEach((row) => {
-                        row.style.display = "";
-                    });
-                }
+            ?.addEventListener("change", () => {
+                hideMicrosoft();
             });
 
         const container = document.getElementById("task-list");
@@ -330,8 +330,9 @@ const tableHeader = [
         searchBar?.addEventListener("input", () => {
             currentSearch = searchBar.value.toLowerCase().trim();
             const rows = document.querySelectorAll(
-                "table tbody tr.task",
+                "table tbody tr.task:not(.microsoft)",
             ) as NodeListOf<HTMLTableRowElement>;
+            hideMicrosoft();
             searchFilter(rows, currentSearch);
         });
 
