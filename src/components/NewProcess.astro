@@ -24,21 +24,11 @@ import { X } from "@lucide/astro";
 
 <script>
     import { runNewProcess } from "../utils/scripts";
-    const processDialog = document.querySelector(
-        ".process-dialog",
-    ) as HTMLDialogElement;
-    const dialogDiv = processDialog.querySelector(
-        ".modal-content",
-    ) as HTMLDivElement;
-    const closeProcessDialog = document.getElementById(
-        "closeProcessDialog",
-    ) as HTMLButtonElement;
-    const runProcessButton = document.getElementById(
-        "runProcessButton",
-    ) as HTMLButtonElement;
-    const processInput = document.getElementById(
-        "newProcessInput",
-    ) as HTMLInputElement;
+    const processDialog = document.querySelector(".process-dialog") as HTMLDialogElement;
+    const dialogDiv = processDialog.querySelector(".modal-content") as HTMLDivElement;
+    const closeProcessDialog = document.getElementById("closeProcessDialog") as HTMLButtonElement;
+    const runProcessButton = document.getElementById("runProcessButton") as HTMLButtonElement;
+    const processInput = document.getElementById("newProcessInput") as HTMLInputElement;
 
     processDialog.addEventListener("open", async () => {
         processDialog.showModal();

@@ -27,22 +27,11 @@ const selectedOption = options.find((option) => option.value === defaultValue);
     id=`${id}-container`
     data-active="false"
 >
-    <div
-        class="custom-select"
-        tabindex="0"
-        aria-haspopup="listbox"
-        aria-expanded="false"
-    >
+    <div class="custom-select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
         <div class="selected-value">{selectedOption?.label || ""}</div>
         <ChevronDown class="chevron" size="24" />
 
-        <input
-            type="hidden"
-            id={id}
-            name={name}
-            data-key="cpu_priority"
-            value={defaultValue}
-        />
+        <input type="hidden" id={id} name={name} data-key="cpu_priority" value={defaultValue} />
     </div>
 
     <div class="select-dropdown" role="listbox">
@@ -67,25 +56,20 @@ const selectedOption = options.find((option) => option.value === defaultValue);
     document.addEventListener("DOMContentLoaded", initCustomSelects);
 
     function closeAllDropdowns(exceptContainer = null) {
-        document
-            .querySelectorAll(".custom-select-container")
-            .forEach((container) => {
-                if (container !== exceptContainer) {
-                    const select = container.querySelector(".custom-select");
-                    const dropdown =
-                        container.querySelector(".select-dropdown");
-                    if (select && dropdown) {
-                        select.setAttribute("aria-expanded", "false");
-                        dropdown.classList.remove("active");
-                    }
+        document.querySelectorAll(".custom-select-container").forEach((container) => {
+            if (container !== exceptContainer) {
+                const select = container.querySelector(".custom-select");
+                const dropdown = container.querySelector(".select-dropdown");
+                if (select && dropdown) {
+                    select.setAttribute("aria-expanded", "false");
+                    dropdown.classList.remove("active");
                 }
-            });
+            }
+        });
     }
 
     function initCustomSelects() {
-        const containers = document.querySelectorAll(
-            ".custom-select-container",
-        );
+        const containers = document.querySelectorAll(".custom-select-container");
 
         containers.forEach((container) => {
             const selectElement = container.querySelector(".custom-select");
@@ -96,8 +80,7 @@ const selectedOption = options.find((option) => option.value === defaultValue);
 
             selectElement.addEventListener("click", (e) => {
                 e.stopPropagation();
-                const isExpanded =
-                    selectElement.getAttribute("aria-expanded") === "true";
+                const isExpanded = selectElement.getAttribute("aria-expanded") === "true";
 
                 closeAllDropdowns(container);
 
@@ -108,17 +91,13 @@ const selectedOption = options.find((option) => option.value === defaultValue);
             options.forEach((option) => {
                 option.addEventListener("click", () => {
                     const value = option.getAttribute("data-value");
-                    const label = option
-                        .querySelector("span")
-                        .textContent.trim();
+                    const label = option.querySelector("span").textContent.trim();
 
                     hiddenInput.value = value;
                     hiddenInput.dataset.key = option.getAttribute("data-key");
                     selectedValue.textContent = label;
 
-                    options.forEach((opt) =>
-                        opt.setAttribute("aria-selected", "false"),
-                    );
+                    options.forEach((opt) => opt.setAttribute("aria-selected", "false"));
                     option.setAttribute("aria-selected", "true");
 
                     options.forEach((opt) => opt.classList.remove("selected"));
@@ -136,8 +115,7 @@ const selectedOption = options.find((option) => option.value === defaultValue);
 
             // keyboard navigation
             selectElement.addEventListener("keydown", (e) => {
-                const isExpanded =
-                    selectElement.getAttribute("aria-expanded") === "true";
+                const isExpanded = selectElement.getAttribute("aria-expanded") === "true";
 
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -147,22 +125,14 @@ const selectedOption = options.find((option) => option.value === defaultValue);
                 } else if (e.key === "Escape") {
                     selectElement.setAttribute("aria-expanded", "false");
                     dropdownElement.classList.remove("active");
-                } else if (
-                    e.key === "ArrowDown" &&
-                    dropdownElement.classList.contains("active")
-                ) {
+                } else if (e.key === "ArrowDown" && dropdownElement.classList.contains("active")) {
                     e.preventDefault();
                     const selected = container.querySelector(
                         '.select-option[aria-selected="true"]',
                     );
-                    const next = selected
-                        ? selected.nextElementSibling
-                        : options[0];
+                    const next = selected ? selected.nextElementSibling : options[0];
                     if (next) next.click();
-                } else if (
-                    e.key === "ArrowUp" &&
-                    dropdownElement.classList.contains("active")
-                ) {
+                } else if (e.key === "ArrowUp" && dropdownElement.classList.contains("active")) {
                     e.preventDefault();
                     const selected = container.querySelector(
                         '.select-option[aria-selected="true"]',

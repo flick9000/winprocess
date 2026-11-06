@@ -1,6 +1,5 @@
 {
     "tabWidth": 4,
-    "useTabs": false,
     "plugins": ["prettier-plugin-astro"],
-    "printWidth": 80
+    "printWidth": 100
 }

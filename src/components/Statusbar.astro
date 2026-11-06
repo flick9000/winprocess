@@ -55,9 +55,7 @@
             const stats = await invoke<SystemStats>("get_system_stats");
             const cpuUsage = stats.cpu_usage.toFixed(1);
             const ramPercentage = stats.ram_percentage.toFixed(1);
-            const uptimeTime = new Date(stats.uptime * 1000)
-                .toISOString()
-                .slice(11, 19);
+            const uptimeTime = new Date(stats.uptime * 1000).toISOString().slice(11, 19);
 
             cpu.textContent = `${cpuUsage}%`;
             ram.textContent = `${ramPercentage}%`;

@@ -55,10 +55,7 @@ export const STATIC_MENUS = {
     ],
 };
 
-export const setMenuPosition = async (
-    menuElement: HTMLElement | null,
-    event: MouseEvent,
-) => {
+export const setMenuPosition = async (menuElement: HTMLElement | null, event: MouseEvent) => {
     event.preventDefault();
     if (!menuElement) return;
 

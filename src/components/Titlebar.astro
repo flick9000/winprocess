@@ -31,9 +31,7 @@ import { Minus, Square, X, Heart } from "@lucide/astro";
         .getElementById("titlebar-maximize")
         ?.addEventListener("click", () => appWindow.toggleMaximize());
     document.getElementById("titlebar-close")?.addEventListener("click", () => {
-        const supportDialog = document.getElementById(
-            "supportDialog",
-        ) as HTMLDialogElement;
+        const supportDialog = document.getElementById("supportDialog") as HTMLDialogElement;
 
         const askSupport = localStorage.getItem("askSupport");
 

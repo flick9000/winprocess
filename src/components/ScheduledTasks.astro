@@ -22,12 +22,7 @@ const tableHeader = [
 <div id="taskMenu" class="menu">
     <MenuItem id="taskName" disabled label="Name:" dropdown={false} />
     <MenuItem icon={Play} id="toggleTaskState" label="Run" dropdown={false} />
-    <MenuItem
-        icon={ToggleRight}
-        id="toggleTaskStartup"
-        label="Disable"
-        dropdown={false}
-    />
+    <MenuItem icon={ToggleRight} id="toggleTaskStartup" label="Disable" dropdown={false} />
     <MenuItem icon={Trash} id="deleteTask" label="Delete" dropdown={false} />
 </div>
 
@@ -96,24 +91,12 @@ const tableHeader = [
 
     function sortTasks(tasks: ScheduledTaskInfo[]): ScheduledTaskInfo[] {
         return [...tasks].sort((a, b) => {
-            let valA =
-                sortKey === "author"
-                    ? formatAuthor(a.author)
-                    : String(a[sortKey] ?? "");
-            let valB =
-                sortKey === "author"
-                    ? formatAuthor(b.author)
-                    : String(b[sortKey] ?? "");
+            let valA = sortKey === "author" ? formatAuthor(a.author) : String(a[sortKey] ?? "");
+            let valB = sortKey === "author" ? formatAuthor(b.author) : String(b[sortKey] ?? "");
 
             if (sortKey === "state") {
-                valA =
-                    a.state === "TASK_STATE(1)"
-                        ? ""
-                        : (TASK_STATUS[a.state] ?? a.state);
-                valB =
-                    b.state === "TASK_STATE(1)"
-                        ? ""
-                        : (TASK_STATUS[b.state] ?? b.state);
+                valA = a.state === "TASK_STATE(1)" ? "" : (TASK_STATUS[a.state] ?? a.state);
+                valB = b.state === "TASK_STATE(1)" ? "" : (TASK_STATUS[b.state] ?? b.state);
             }
 
             if (!valA && valB) return 1;
@@ -180,9 +163,7 @@ const tableHeader = [
     }
 
     function hideMicrosoft() {
-        const checkbox = document.getElementById(
-            "hideMicrosoft",
-        ) as HTMLInputElement;
+        const checkbox = document.getElementById("hideMicrosoft") as HTMLInputElement;
         const rows = document.querySelectorAll(
             "table tbody tr.task",
         ) as NodeListOf<HTMLTableRowElement>;
@@ -204,18 +185,14 @@ const tableHeader = [
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        document
-            .getElementById("tasksRefresh")
-            ?.addEventListener("click", async () => {
-                await refreshTasks();
-                hideMicrosoft();
-            });
+        document.getElementById("tasksRefresh")?.addEventListener("click", async () => {
+            await refreshTasks();
+            hideMicrosoft();
+        });
 
-        document
-            .getElementById("hideMicrosoft")
-            ?.addEventListener("change", () => {
-                hideMicrosoft();
-            });
+        document.getElementById("hideMicrosoft")?.addEventListener("change", () => {
+            hideMicrosoft();
+        });
 
         const container = document.getElementById("task-list");
         const menuElement = document.getElementById("taskMenu");
@@ -264,18 +241,14 @@ const tableHeader = [
 
             const taskName = document.getElementById("taskName");
             const toggleTaskState = document.getElementById("toggleTaskState");
-            const toggleTaskStartup =
-                document.getElementById("toggleTaskStartup");
+            const toggleTaskStartup = document.getElementById("toggleTaskStartup");
 
             if (!taskName || !toggleTaskState || !toggleTaskStartup) return;
             // set items labels
-            const truncatedName =
-                name.length > 24 ? `${name.substring(0, 24)}...` : name;
+            const truncatedName = name.length > 24 ? `${name.substring(0, 24)}...` : name;
             taskName.textContent = "Task: " + truncatedName;
-            toggleTaskState.textContent =
-                formattedStatus === "Running" ? "End" : "Run";
-            toggleTaskStartup.textContent =
-                enabled === "true" ? "Disable" : "Enable";
+            toggleTaskState.textContent = formattedStatus === "Running" ? "End" : "Run";
+            toggleTaskStartup.textContent = enabled === "true" ? "Disable" : "Enable";
         };
 
         container?.addEventListener("contextmenu", handleMenuOpen);
@@ -291,18 +264,9 @@ const tableHeader = [
             .querySelector(".menu-item:has(#toggleTaskState)")
             ?.addEventListener("click", async () => {
                 if (currentEnabled === "false") {
-                    await toggleScheduledTask(
-                        currentName,
-                        currentPath,
-                        currentEnabled,
-                    );
+                    await toggleScheduledTask(currentName, currentPath, currentEnabled);
                 }
-                await actionScheduledTask(
-                    currentName,
-                    currentPath,
-                    currentEnabled,
-                    currentStatus,
-                );
+                await actionScheduledTask(currentName, currentPath, currentEnabled, currentStatus);
                 await refreshTasks();
                 hideMicrosoft();
             });
@@ -310,11 +274,7 @@ const tableHeader = [
         document
             .querySelector(".menu-item:has(#toggleTaskStartup)")
             ?.addEventListener("click", async () => {
-                await toggleScheduledTask(
-                    currentName,
-                    currentPath,
-                    currentEnabled,
-                );
+                await toggleScheduledTask(currentName, currentPath, currentEnabled);
                 await refreshTasks();
                 hideMicrosoft();
             });
@@ -327,9 +287,7 @@ const tableHeader = [
                 hideMicrosoft();
             });
 
-        const searchBar = document.getElementById(
-            "searchTask",
-        ) as HTMLInputElement;
+        const searchBar = document.getElementById("searchTask") as HTMLInputElement;
         searchBar?.addEventListener("input", () => {
             currentSearch = searchBar.value.toLowerCase().trim();
             const rows = document.querySelectorAll(
@@ -361,9 +319,7 @@ const tableHeader = [
     });
 
     async function refreshTasks() {
-        lastTasks = await invoke<ScheduledTaskInfo[]>(
-            "refresh_scheduled_tasks",
-        );
+        lastTasks = await invoke<ScheduledTaskInfo[]>("refresh_scheduled_tasks");
         renderTasks(lastTasks);
     }
 

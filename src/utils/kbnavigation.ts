@@ -1,8 +1,6 @@
 export interface KeyboardNavigationOptions {
     rowSelector: string;
-    getItemIdentity: (
-        row: HTMLTableRowElement,
-    ) => Record<string, string | null>;
+    getItemIdentity: (row: HTMLTableRowElement) => Record<string, string | null>;
     nameSelector?: string;
 }
 
@@ -14,14 +12,9 @@ export function initKeyboardNavigation({
     let selectedRows: Record<string, string | null>[] = [];
     let lastKey = "";
 
-    function navigateRows(
-        rows: NodeListOf<HTMLTableRowElement>,
-        keyPressed: string,
-    ): boolean {
+    function navigateRows(rows: NodeListOf<HTMLTableRowElement>, keyPressed: string): boolean {
         for (const row of rows) {
-            const name = row
-                .querySelector(nameSelector)
-                ?.textContent?.toLowerCase();
+            const name = row.querySelector(nameSelector)?.textContent?.toLowerCase();
 
             const currentIdentity = getItemIdentity(row);
 
@@ -53,8 +46,7 @@ export function initKeyboardNavigation({
             return;
         }
 
-        const rows =
-            document.querySelectorAll<HTMLTableRowElement>(rowSelector);
+        const rows = document.querySelectorAll<HTMLTableRowElement>(rowSelector);
         rows.forEach((row) => row.classList.remove("selected"));
 
         if (keyPressed !== lastKey) {

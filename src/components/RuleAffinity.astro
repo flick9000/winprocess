@@ -17,11 +17,7 @@ const cpuCores = getCpuCoresArray();
             {cpuCores.map((core) => (
                 <div class="checkbox-wrapper">
                     <label class="switch">
-                        <input
-                            class="checkbox-core"
-                            id={`core-${core}`}
-                            type="checkbox"
-                        />
+                        <input class="checkbox-core" id={`core-${core}`} type="checkbox" />
                         <span class="slider" />
                     </label>
                     <span>Core {core}</span>
@@ -40,20 +36,11 @@ const cpuCores = getCpuCoresArray();
 
     const always = new LazyStore("always.json");
 
-    const affinityDialog = document.querySelector(
-        "#ruleAffinityDialog",
-    ) as HTMLDialogElement;
-    const dialogDiv = affinityDialog.querySelector(
-        ".modal-content",
-    ) as HTMLDivElement;
-    const closeAffinityDialog = affinityDialog.querySelector(
-        "#closeAffinityDialog",
-    );
-    const cpuCheckboxes =
-        affinityDialog.querySelectorAll<HTMLInputElement>(".checkbox-core");
-    const nameHeader = affinityDialog.querySelector(
-        "#modalName",
-    ) as HTMLSpanElement;
+    const affinityDialog = document.querySelector("#ruleAffinityDialog") as HTMLDialogElement;
+    const dialogDiv = affinityDialog.querySelector(".modal-content") as HTMLDivElement;
+    const closeAffinityDialog = affinityDialog.querySelector("#closeAffinityDialog");
+    const cpuCheckboxes = affinityDialog.querySelectorAll<HTMLInputElement>(".checkbox-core");
+    const nameHeader = affinityDialog.querySelector("#modalName") as HTMLSpanElement;
     const applyRuleAffinity = affinityDialog.querySelector(
         "#applyRuleAffinity",
     ) as HTMLButtonElement;
@@ -105,17 +92,11 @@ const cpuCores = getCpuCoresArray();
             if (checkbox.checked) {
                 checkedCores.push(coreIndex);
             } else {
-                checkedCores = checkedCores.filter(
-                    (core) => core !== coreIndex,
-                );
+                checkedCores = checkedCores.filter((core) => core !== coreIndex);
             }
 
-            applyRuleAffinity.disabled =
-                checkedCores.length === 0 ? true : false;
-            applyRuleAffinity.classList.toggle(
-                "disabled",
-                checkedCores.length === 0,
-            );
+            applyRuleAffinity.disabled = checkedCores.length === 0 ? true : false;
+            applyRuleAffinity.classList.toggle("disabled", checkedCores.length === 0);
         });
     });
 

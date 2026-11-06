@@ -15,8 +15,8 @@
     .startup-icon[src="/startup.svg"],
     .rule-icon[src="/rules.svg"],
     .task-icon[src="/task.svg"] {
-        filter: invert(34%) sepia(0%) saturate(343%) hue-rotate(222deg)
-            brightness(85%) contrast(82%) !important;
+        filter: invert(34%) sepia(0%) saturate(343%) hue-rotate(222deg) brightness(85%)
+            contrast(82%) !important;
     }
 }
 
@@ -309,8 +309,7 @@ input[type="checkbox"]:checked::before {
 .startup-icon[src="/startup.svg"],
 .rule-icon[src="/rules.svg"],
 .task-icon[src="/task.svg"] {
-    filter: invert(73%) sepia(0%) saturate(0%) hue-rotate(16deg) brightness(88%)
-        contrast(89%);
+    filter: invert(73%) sepia(0%) saturate(0%) hue-rotate(16deg) brightness(88%) contrast(89%);
 }
 
 dialog {

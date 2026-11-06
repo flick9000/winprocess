@@ -39,12 +39,7 @@ const tableHeader = [
 
 <div id="processMenu" class="menu">
     <MenuItem id="processName" label="Name:" disabled dropdown={false} />
-    <MenuItem
-        id="processCpuAffinity"
-        icon={ArrowDown10}
-        label="CPU Affinity"
-        dropdown={false}
-    />
+    <MenuItem id="processCpuAffinity" icon={ArrowDown10} label="CPU Affinity" dropdown={false} />
     <MenuItem
         id="processCpuPriority"
         icon={Cpu}
@@ -97,51 +92,15 @@ const tableHeader = [
         dropdown
         items={STATIC_MENUS.efficiency}
     />
-    <MenuItem
-        id="processBoost"
-        icon={Rocket}
-        label="Boost"
-        dropdown
-        items={STATIC_MENUS.boost}
-    />
+    <MenuItem id="processBoost" icon={Rocket} label="Boost" dropdown items={STATIC_MENUS.boost} />
     <hr />
-    <MenuItem
-        id="processCopyRules"
-        icon={Copy}
-        label="Copy Rules"
-        dropdown={false}
-    />
-    <MenuItem
-        id="processPasteRules"
-        icon={Clipboard}
-        label="Paste Rules"
-        dropdown={false}
-    />
-    <MenuItem
-        id="processRemoveRules"
-        icon={Trash}
-        label="Remove Rules"
-        dropdown={false}
-    />
+    <MenuItem id="processCopyRules" icon={Copy} label="Copy Rules" dropdown={false} />
+    <MenuItem id="processPasteRules" icon={Clipboard} label="Paste Rules" dropdown={false} />
+    <MenuItem id="processRemoveRules" icon={Trash} label="Remove Rules" dropdown={false} />
     <hr />
-    <MenuItem
-        id="processLocate"
-        icon={Folder}
-        label="Locate"
-        dropdown={false}
-    />
-    <MenuItem
-        id="processRestart"
-        icon={RotateCcw}
-        label="Restart"
-        dropdown={false}
-    />
-    <MenuItem
-        id="processTerminate"
-        icon={Ban}
-        label="Terminate"
-        dropdown={false}
-    />
+    <MenuItem id="processLocate" icon={Folder} label="Locate" dropdown={false} />
+    <MenuItem id="processRestart" icon={RotateCcw} label="Restart" dropdown={false} />
+    <MenuItem id="processTerminate" icon={Ban} label="Terminate" dropdown={false} />
     <hr />
     <MenuItem
         id="processApplyToAllInstances"
@@ -277,8 +236,7 @@ const tableHeader = [
             io_priority: raw.io_priority ?? cached?.io_priority ?? null,
             mem_priority: raw.mem_priority ?? cached?.mem_priority ?? null,
             boost: raw.boost ?? cached?.boost ?? null,
-            efficiency_mode:
-                raw.efficiency_mode ?? cached?.efficiency_mode ?? null,
+            efficiency_mode: raw.efficiency_mode ?? cached?.efficiency_mode ?? null,
             gpu_priority: raw.gpu_priority ?? cached?.gpu_priority ?? null,
         };
         processCache.set(raw.pid, merged);
@@ -307,10 +265,7 @@ const tableHeader = [
         }
     }
 
-    const RULE_APPLIERS: Record<
-        string,
-        (pid: number, value: string) => Promise<void>
-    > = {
+    const RULE_APPLIERS: Record<string, (pid: number, value: string) => Promise<void>> = {
         cpu_affinity: setProcessAffinity,
         cpu_priority: setCpuPriority,
         io_priority: setIOPriority,
@@ -350,9 +305,7 @@ const tableHeader = [
                 allRules
                     .filter((rule) => rule.startsWith(`${process.name}_`))
                     .map(async (rule) => {
-                        const stored = await always.get<{ value: string }>(
-                            rule,
-                        );
+                        const stored = await always.get<{ value: string }>(rule);
                         return stored
                             ? {
                                   key: rule.replace(`${process.name}_`, ""),
@@ -361,22 +314,14 @@ const tableHeader = [
                             : null;
                     }),
             )
-        ).filter(
-            (entry): entry is { key: string; value: string } => entry !== null,
-        );
+        ).filter((entry): entry is { key: string; value: string } => entry !== null);
 
-        function setChecked(
-            mode: "current" | "always",
-            type: string,
-            value: string,
-        ) {
+        function setChecked(mode: "current" | "always", type: string, value: string) {
             const button = document.querySelector(
                 `ul.${mode} button[data-type="${type}"][data-value="${value}"]`,
             );
             const li = button?.closest("li");
-            const checked = li?.querySelector(
-                ".checked",
-            ) as HTMLDivElement | null;
+            const checked = li?.querySelector(".checked") as HTMLDivElement | null;
 
             if (checked) {
                 checked.style.opacity = "1";
@@ -389,42 +334,22 @@ const tableHeader = [
         }
 
         if (process.priority != null && process.priority !== -1) {
-            setChecked(
-                "current",
-                "cpu_priority",
-                CPU_PRIORITY_IDS[process.priority],
-            );
+            setChecked("current", "cpu_priority", CPU_PRIORITY_IDS[process.priority]);
         }
         if (process.io_priority != null) {
-            setChecked(
-                "current",
-                "io_priority",
-                IO_PRIORITY_IDS[process.io_priority],
-            );
+            setChecked("current", "io_priority", IO_PRIORITY_IDS[process.io_priority]);
         }
         if (process.gpu_priority != null) {
-            setChecked(
-                "current",
-                "gpu_priority",
-                GPU_PRIORITY_IDS[process.gpu_priority],
-            );
+            setChecked("current", "gpu_priority", GPU_PRIORITY_IDS[process.gpu_priority]);
         }
         if (process.mem_priority != null) {
-            setChecked(
-                "current",
-                "mem_priority",
-                MEM_PRIORITY_IDS[process.mem_priority],
-            );
+            setChecked("current", "mem_priority", MEM_PRIORITY_IDS[process.mem_priority]);
         }
         if (process.boost != null) {
             setChecked("current", "boost", String(process.boost));
         }
         if (process.efficiency_mode != null) {
-            setChecked(
-                "current",
-                "efficiency_mode",
-                String(process.efficiency_mode),
-            );
+            setChecked("current", "efficiency_mode", String(process.efficiency_mode));
         }
     }
 
@@ -437,13 +362,11 @@ const tableHeader = [
                     break;
                 case "rules":
                     const rulesA =
-                        document.querySelector(
-                            `.process[data-pid="${a.pid}"] .rules`,
-                        )?.textContent || "";
+                        document.querySelector(`.process[data-pid="${a.pid}"] .rules`)
+                            ?.textContent || "";
                     const rulesB =
-                        document.querySelector(
-                            `.process[data-pid="${b.pid}"] .rules`,
-                        )?.textContent || "";
+                        document.querySelector(`.process[data-pid="${b.pid}"] .rules`)
+                            ?.textContent || "";
                     cmp = rulesA.localeCompare(rulesB);
                     break;
                 case "cpu":
@@ -456,8 +379,7 @@ const tableHeader = [
                     cmp = a.pid - b.pid;
                     break;
                 case "affinity":
-                    cmp =
-                        (a.affinity?.length ?? -1) - (b.affinity?.length ?? -1);
+                    cmp = (a.affinity?.length ?? -1) - (b.affinity?.length ?? -1);
                     break;
             }
             return sortDir === "asc" ? cmp : -cmp;
@@ -468,19 +390,13 @@ const tableHeader = [
         const container = document.getElementById("process-rows");
         if (!container) return;
 
-        const sortedProcesses = sortProcesses(processes).filter(
-            (p) => p.pid !== 0,
-        );
+        const sortedProcesses = sortProcesses(processes).filter((p) => p.pid !== 0);
 
         const rowsHtml = sortedProcesses
             .map((p) => {
-                const cachedIcon = p.exe_path
-                    ? iconCache.get(p.exe_path)
-                    : undefined;
+                const cachedIcon = p.exe_path ? iconCache.get(p.exe_path) : undefined;
 
-                const cachedRule = p.exe_path
-                    ? ruleCache.get(p.exe_path)
-                    : undefined;
+                const cachedRule = p.exe_path ? ruleCache.get(p.exe_path) : undefined;
 
                 return `
                 
@@ -530,9 +446,7 @@ const tableHeader = [
 
                 ruleCache.set(p.exe_path, formattedRules);
 
-                const rulesCell = document.querySelector(
-                    `.process[data-pid="${p.pid}"] .rules`,
-                );
+                const rulesCell = document.querySelector(`.process[data-pid="${p.pid}"] .rules`);
                 if (rulesCell) rulesCell.innerHTML = formattedRules;
             }),
         );
@@ -556,20 +470,14 @@ const tableHeader = [
         const container = document.getElementById("process-list");
         const menuElement = document.getElementById("processMenu");
 
-        const plansContainer = document.querySelector(
-            "#processMenu .plans-container",
-        );
+        const plansContainer = document.querySelector("#processMenu .plans-container");
 
         await loadPowerPlans(plansContainer);
 
-        document
-            .getElementById("newProcessButton")
-            ?.addEventListener("click", () => {
-                const processDialog = document.querySelector(
-                    ".process-dialog",
-                ) as HTMLDialogElement;
-                processDialog.dispatchEvent(new Event("open"));
-            });
+        document.getElementById("newProcessButton")?.addEventListener("click", () => {
+            const processDialog = document.querySelector(".process-dialog") as HTMLDialogElement;
+            processDialog.dispatchEvent(new Event("open"));
+        });
 
         container?.addEventListener("click", async (event) => {
             const th = (event.target as HTMLElement).closest("th[data-sort]");
@@ -624,9 +532,7 @@ const tableHeader = [
             }
         });
 
-        const nestedButtons = document.querySelectorAll(
-            "#processMenu .nested-button",
-        );
+        const nestedButtons = document.querySelectorAll("#processMenu .nested-button");
         nestedButtons.forEach((button) => {
             const menuItem = button.closest("li");
             menuItem?.addEventListener("click", async () => {
@@ -677,14 +583,10 @@ const tableHeader = [
             .querySelector(".menu-item:has(#processCopyRules)")
             ?.addEventListener("click", async () => {
                 const allRules = await always.keys();
-                const itemRules = allRules.filter((rule) =>
-                    rule.startsWith(`${currentName}_`),
-                );
+                const itemRules = allRules.filter((rule) => rule.startsWith(`${currentName}_`));
                 const entries = await Promise.all(
                     itemRules.map(async (rule) => {
-                        const stored = await always.get<{ value: string }>(
-                            rule,
-                        );
+                        const stored = await always.get<{ value: string }>(rule);
                         return stored
                             ? {
                                   key: rule.replace(`${currentName}_`, ""),
@@ -694,8 +596,7 @@ const tableHeader = [
                     }),
                 );
                 copiedRules = entries.filter(
-                    (entry): entry is { key: string; value: string } =>
-                        entry !== null,
+                    (entry): entry is { key: string; value: string } => entry !== null,
                 );
             });
 
@@ -762,10 +663,7 @@ const tableHeader = [
 
                 await Promise.all(
                     otherIstancesPids.map(async (pid) => {
-                        if (
-                            process.priority !== null &&
-                            process.priority !== -1
-                        ) {
+                        if (process.priority !== null && process.priority !== -1) {
                             await RULE_APPLIERS["cpu_priority"](
                                 pid,
                                 CPU_PRIORITY_IDS[process.priority],
@@ -796,10 +694,7 @@ const tableHeader = [
                             );
                         }
                         if (process.boost !== null) {
-                            await RULE_APPLIERS["boost"](
-                                pid,
-                                String(process.boost),
-                            );
+                            await RULE_APPLIERS["boost"](pid, String(process.boost));
                         }
                     }),
                 );
@@ -807,9 +702,7 @@ const tableHeader = [
                 loadProcesses();
             });
 
-        const searchBar = document.getElementById(
-            "searchProcess",
-        ) as HTMLInputElement;
+        const searchBar = document.getElementById("searchProcess") as HTMLInputElement;
         searchBar?.addEventListener("input", () => {
             currentSearch = searchBar.value.toLowerCase().trim();
             const rows = document.querySelectorAll(
@@ -839,10 +732,7 @@ const tableHeader = [
         });
     });
 
-    function processesEqual(
-        a: Map<Number, String>,
-        b: Map<Number, String>,
-    ): boolean {
+    function processesEqual(a: Map<Number, String>, b: Map<Number, String>): boolean {
         if (a.size !== b.size) return false;
 
         for (const [pid, name] of a) {
@@ -898,8 +788,7 @@ const tableHeader = [
             }
 
             const old = oldByPid.get(p.pid);
-            if (old && old.exe_path === p.exe_path)
-                return !iconCache.has(p.exe_path);
+            if (old && old.exe_path === p.exe_path) return !iconCache.has(p.exe_path);
 
             return true;
         });
@@ -907,9 +796,7 @@ const tableHeader = [
 
     function updateProcessesRows(processes: ProcessInfo[]) {
         processes.map((p) => {
-            const row = document.querySelector(
-                `tr.process[data-pid="${p.pid}"]`,
-            );
+            const row = document.querySelector(`tr.process[data-pid="${p.pid}"]`);
             if (!row) return;
 
             if (row.getAttribute("data-name") !== p.name) {
@@ -930,11 +817,7 @@ const tableHeader = [
             const rowPriority = row.querySelector(".priority");
             const prioritySpan = rowPriority?.querySelector("span");
             const newPriority = CPU_PRIORITY_LABELS[p.priority] ?? p.priority;
-            if (
-                rowPriority &&
-                prioritySpan &&
-                prioritySpan.textContent !== newPriority
-            ) {
+            if (rowPriority && prioritySpan && prioritySpan.textContent !== newPriority) {
                 rowPriority.setAttribute("data-priority", String(p.priority));
                 prioritySpan.textContent = newPriority;
             }
@@ -952,9 +835,7 @@ const tableHeader = [
         const newProcesses = mergeProcessList(rawProcesses);
         let newPidsSet = new Map<number, string>();
 
-        newProcesses.forEach((process) =>
-            newPidsSet.set(process.pid, process.name),
-        );
+        newProcesses.forEach((process) => newPidsSet.set(process.pid, process.name));
 
         if (processesEqual(currentPidsSet, newPidsSet)) {
             updateProcessesRows(newProcesses);
@@ -980,9 +861,7 @@ const tableHeader = [
     const settings = new LazyStore("settings.json");
     const tabs = document.querySelectorAll(".sidebar-entry");
     let polling = await settings.get<number>("polling");
-    let interval = setInterval(loadProcesses, polling ?? 2000) as ReturnType<
-        typeof setInterval
-    >;
+    let interval = setInterval(loadProcesses, polling ?? 2000) as ReturnType<typeof setInterval>;
 
     tabs.forEach((tab) => {
         tab.addEventListener("click", async () => {

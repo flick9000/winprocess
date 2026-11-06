@@ -16,11 +16,7 @@ const cpuCores = getCpuCoresArray();
             {cpuCores.map((core) => (
                 <div class="checkbox-wrapper">
                     <label class="switch">
-                        <input
-                            class="checkbox-core"
-                            id={`core-${core}`}
-                            type="checkbox"
-                        />
+                        <input class="checkbox-core" id={`core-${core}`} type="checkbox" />
                         <span class="slider" />
                     </label>
                     <span>Core {core}</span>
@@ -42,35 +38,20 @@ const cpuCores = getCpuCoresArray();
 
 <script>
     import { invoke } from "@tauri-apps/api/core";
-    import {
-        getCpuAffinity,
-        bitmaskToCpuArray,
-        setProcessAffinity,
-    } from "../utils/scripts";
+    import { getCpuAffinity, bitmaskToCpuArray, setProcessAffinity } from "../utils/scripts";
     import { LazyStore } from "@tauri-apps/plugin-store";
 
     const always = new LazyStore("always.json");
 
-    const affinityDialog = document.querySelector(
-        "#processAffinityDialog",
-    ) as HTMLDialogElement;
-    const dialogDiv = affinityDialog.querySelector(
-        ".modal-content",
-    ) as HTMLDivElement;
-    const closeAffinityDialog = affinityDialog.querySelector(
-        "#closeAffinityDialog",
-    );
-    const cpuCheckboxes =
-        affinityDialog.querySelectorAll<HTMLInputElement>(".checkbox-core");
-    const pidHeader = affinityDialog.querySelector(
-        "#modalPid",
-    ) as HTMLSpanElement;
+    const affinityDialog = document.querySelector("#processAffinityDialog") as HTMLDialogElement;
+    const dialogDiv = affinityDialog.querySelector(".modal-content") as HTMLDivElement;
+    const closeAffinityDialog = affinityDialog.querySelector("#closeAffinityDialog");
+    const cpuCheckboxes = affinityDialog.querySelectorAll<HTMLInputElement>(".checkbox-core");
+    const pidHeader = affinityDialog.querySelector("#modalPid") as HTMLSpanElement;
     const applyProcessAffinity = affinityDialog.querySelector(
         "#applyProcessAffinity",
     ) as HTMLButtonElement;
-    const alwaysCheck = affinityDialog.querySelector(
-        "#alwaysCheck",
-    ) as HTMLInputElement;
+    const alwaysCheck = affinityDialog.querySelector("#alwaysCheck") as HTMLInputElement;
 
     let pid: number;
     let name: string | undefined;
@@ -129,17 +110,11 @@ const cpuCores = getCpuCoresArray();
             if (checkbox.checked) {
                 checkedCores.push(coreIndex);
             } else {
-                checkedCores = checkedCores.filter(
-                    (core) => core !== coreIndex,
-                );
+                checkedCores = checkedCores.filter((core) => core !== coreIndex);
             }
 
-            applyProcessAffinity.disabled =
-                checkedCores.length === 0 ? true : false;
-            applyProcessAffinity.classList.toggle(
-                "disabled",
-                checkedCores.length === 0,
-            );
+            applyProcessAffinity.disabled = checkedCores.length === 0 ? true : false;
+            applyProcessAffinity.classList.toggle("disabled", checkedCores.length === 0);
         });
     });
 

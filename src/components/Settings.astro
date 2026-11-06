@@ -33,12 +33,7 @@ const pollings = [
                 <p>Sets how often the app checks for changes in processes.</p>
             </div>
         </div>
-        <Select
-            id="polling"
-            name="Polling rate"
-            options={pollings}
-            defaultValue="2"
-        />
+        <Select id="polling" name="Polling rate" options={pollings} defaultValue="2" />
     </div>
     <div class="setting">
         <div class="setting-left">
@@ -81,9 +76,7 @@ const pollings = [
     const always = new LazyStore("always.json");
 
     async function initPollingSetting() {
-        const hiddenInput = document.getElementById(
-            "polling",
-        ) as HTMLInputElement | null;
+        const hiddenInput = document.getElementById("polling") as HTMLInputElement | null;
         if (!hiddenInput) return;
 
         const container = hiddenInput.closest(".custom-select-container");
@@ -103,8 +96,7 @@ const pollings = [
 
             if (!targetOption) return;
 
-            const label =
-                targetOption.querySelector("span")?.textContent?.trim() || "";
+            const label = targetOption.querySelector("span")?.textContent?.trim() || "";
 
             hiddenInput.value = formattedValue;
 
@@ -137,9 +129,7 @@ const pollings = [
         initPollingSetting();
 
         const isStartupEnabled = await invoke("is_autostart_enabled");
-        const checkbox = document.getElementById(
-            "launchAtStartup",
-        ) as HTMLInputElement;
+        const checkbox = document.getElementById("launchAtStartup") as HTMLInputElement;
 
         if (isStartupEnabled === true) {
             checkbox.checked = true;

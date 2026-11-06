@@ -106,13 +106,7 @@ const rules = [
             <button id="ruleFileDialog">Browse</button>
         </div>
         <div class="modal-rule">
-            <Select
-                width="140px"
-                id="ruleType"
-                name="Rule"
-                options={rules}
-                defaultValue="cpu"
-            />
+            <Select width="140px" id="ruleType" name="Rule" options={rules} defaultValue="cpu" />
             {rules.map((rule) => (
                 <Select
                     width="140px"
@@ -134,31 +128,17 @@ const rules = [
     import { open } from "@tauri-apps/plugin-dialog";
     import { LazyStore } from "@tauri-apps/plugin-store";
 
-    const ruleDialog = document.querySelector(
-        ".rule-dialog",
-    ) as HTMLDialogElement;
-    const dialogDiv = ruleDialog.querySelector(
-        ".modal-content",
-    ) as HTMLDivElement;
-    const closeRuleDialog = document.getElementById(
-        "closeRuleDialog",
-    ) as HTMLButtonElement;
-    const addRuleButton = document.getElementById(
-        "addRuleButton",
-    ) as HTMLButtonElement;
-    const ruleFileDialog = document.getElementById(
-        "ruleFileDialog",
-    ) as HTMLButtonElement;
-    const ruleInput = document.getElementById(
-        "ruleInputName",
-    ) as HTMLInputElement;
+    const ruleDialog = document.querySelector(".rule-dialog") as HTMLDialogElement;
+    const dialogDiv = ruleDialog.querySelector(".modal-content") as HTMLDivElement;
+    const closeRuleDialog = document.getElementById("closeRuleDialog") as HTMLButtonElement;
+    const addRuleButton = document.getElementById("addRuleButton") as HTMLButtonElement;
+    const ruleFileDialog = document.getElementById("ruleFileDialog") as HTMLButtonElement;
+    const ruleInput = document.getElementById("ruleInputName") as HTMLInputElement;
     const ruleType = document.getElementById("ruleType") as HTMLSelectElement;
 
     const always = new LazyStore("always.json");
 
-    const defaultSelect = document.getElementById(
-        `${ruleType.value}Priority-container`,
-    );
+    const defaultSelect = document.getElementById(`${ruleType.value}Priority-container`);
     if (defaultSelect) {
         defaultSelect.style.display = "flex";
         defaultSelect.dataset.active = "true";
@@ -173,9 +153,7 @@ const rules = [
             select.setAttribute("data-active", "false");
         });
         if (ruleType.value === "efficiency" || ruleType.value === "boost") {
-            const select = document.getElementById(
-                `${ruleType.value}Mode-container`,
-            );
+            const select = document.getElementById(`${ruleType.value}Mode-container`);
             if (!select) return;
             select.style.display = "flex";
             select.dataset.active = "true";
@@ -187,9 +165,7 @@ const rules = [
             select.style.display = "flex";
             select.dataset.active = "true";
         }
-        const select = document.getElementById(
-            `${ruleType.value}Priority-container`,
-        );
+        const select = document.getElementById(`${ruleType.value}Priority-container`);
         if (!select) return;
         select.style.display = "flex";
         select.dataset.active = "true";

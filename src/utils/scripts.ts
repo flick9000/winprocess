@@ -22,9 +22,7 @@ export const getCpuAffinity = (array: number[]) => {
     return modified.reduce((total: number, num: number) => total + num, 0);
 };
 
-export const bitmaskToCpuArray = (
-    mask: number | undefined,
-): number[] | null => {
+export const bitmaskToCpuArray = (mask: number | undefined): number[] | null => {
     if (mask === undefined || mask < 0) return null;
 
     const bits: number[] = [];
@@ -63,10 +61,7 @@ export function formatAffinity(affinity: number[] | null): string {
     return ranges.join(", ");
 }
 
-export const setProcessAffinity = async (
-    pid: number,
-    affinity: number | string,
-) => {
+export const setProcessAffinity = async (pid: number, affinity: number | string) => {
     const mask = typeof affinity === "string" ? Number(affinity) : affinity;
     if (!Number.isFinite(mask)) return;
     await invoke("set_process_affinity", { pid, affinity: mask });
@@ -115,10 +110,7 @@ export const locateProcess = async (pid: number) => {
 };
 
 export const restartProcess = async (pid: number, path: string) => {
-    const args = [
-        ...powershellArgs,
-        `Stop-Process -Id ${pid}; Start-Process -FilePath "${path}"`,
-    ];
+    const args = [...powershellArgs, `Stop-Process -Id ${pid}; Start-Process -FilePath "${path}"`];
     const shell = Command.create("powershell", args);
     await shell.execute();
 };
@@ -144,15 +136,10 @@ export function getCpuCoresArray(): number[] {
     return Array.from({ length: totalCores }, (_, index) => index);
 }
 
-export const getProcessRulesShortcut = async (
-    process: { name: string },
-    always: any,
-) => {
+export const getProcessRulesShortcut = async (process: { name: string }, always: any) => {
     let rules = [];
     const allRules = await always.keys();
-    const itemRules = allRules.filter((rule: string) =>
-        rule.startsWith(`${process.name}_`),
-    );
+    const itemRules = allRules.filter((rule: string) => rule.startsWith(`${process.name}_`));
     const entries = await Promise.all(
         itemRules.map(async (rule: string) => {
             const stored = await always.get(rule);
@@ -182,8 +169,7 @@ export const getProcessRulesShortcut = async (
         }),
     );
     rules = entries.filter(
-        (entry): entry is { key: string; type: string; value: string } =>
-            entry !== null,
+        (entry): entry is { key: string; type: string; value: string } => entry !== null,
     );
     return rules;
 };
@@ -282,20 +268,14 @@ export const toggleStartupEntry = async (
     }
 
     if (registry.includes("WinProcessDisabled") && state === "false") {
-        const parentKey = formatRegistryPath(
-            registry.replace("\\WinProcessDisabled", ""),
-        );
+        const parentKey = formatRegistryPath(registry.replace("\\WinProcessDisabled", ""));
         await regDel(registry, name);
         await regAdd(parentKey, name, command);
     }
 
     if (registry.includes("AutorunsDisabled") && state === "false") {
         await regDel(formatRegistryPath(registry), name);
-        await regAdd(
-            "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-            name,
-            command,
-        );
+        await regAdd("HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", name, command);
     }
 };
 
@@ -351,10 +331,7 @@ export const actionScheduledTask = async (
     }
 };
 
-export const deleteScheduledTask = async (
-    name: string | null,
-    path: string | null,
-) => {
+export const deleteScheduledTask = async (name: string | null, path: string | null) => {
     if (!name || !path) return;
     const lastIndex = path.lastIndexOf("\\");
     const parentPath = path.slice(0, lastIndex + 1);

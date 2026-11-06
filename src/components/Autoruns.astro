@@ -20,42 +20,18 @@ const tableHeader = [
 
 <div id="startupMenu" class="menu">
     <MenuItem id="startupName" label="Name:" disabled dropdown={false} />
-    <MenuItem
-        icon={ToggleRight}
-        id="toggleStartup"
-        label="Enable"
-        dropdown={false}
-    />
+    <MenuItem icon={ToggleRight} id="toggleStartup" label="Enable" dropdown={false} />
     <MenuItem icon={Trash} id="deleteStartup" label="Delete" dropdown={false} />
     <hr />
-    <MenuItem
-        icon={Box}
-        id="locateRegistry"
-        label="Locate Registry"
-        dropdown={false}
-    />
-    <MenuItem
-        icon={Folder}
-        id="locatePath"
-        label="Locate Path"
-        dropdown={false}
-    />
-    <MenuItem
-        icon={Tag}
-        id="openProperties"
-        label="Properties"
-        dropdown={false}
-    />
+    <MenuItem icon={Box} id="locateRegistry" label="Locate Registry" dropdown={false} />
+    <MenuItem icon={Folder} id="locatePath" label="Locate Path" dropdown={false} />
+    <MenuItem icon={Tag} id="openProperties" label="Properties" dropdown={false} />
 </div>
 
 <script>
     import { invoke } from "@tauri-apps/api/core";
     import { Command } from "@tauri-apps/plugin-shell";
-    import {
-        powershellArgs,
-        toggleStartupEntry,
-        regDel,
-    } from "../utils/scripts";
+    import { powershellArgs, toggleStartupEntry, regDel } from "../utils/scripts";
     import { updateSortIndicators } from "../utils/sort";
     import { searchFilter } from "../utils/search";
     import { setMenuPosition } from "../utils/menu";
@@ -125,9 +101,7 @@ const tableHeader = [
                     e.command = e.command.replace(/"/g, "");
                 }
                 const file_path = e.command.split("-")[0].trim();
-                const currentIcon = file_path
-                    ? iconCache.get(file_path)
-                    : undefined;
+                const currentIcon = file_path ? iconCache.get(file_path) : undefined;
 
                 return `
         <tr class="startup-entry" data-source="${e.source}" data-state="${e.enabled}" data-name="${e.name}" data-path="${file_path}" data-registry="${e.registry_path}" data-command="${e.command}">
@@ -157,9 +131,7 @@ const tableHeader = [
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        document
-            .getElementById("autorunsRefresh")
-            ?.addEventListener("click", loadStartupEntries);
+        document.getElementById("autorunsRefresh")?.addEventListener("click", loadStartupEntries);
 
         const container = document.getElementById("startup-list");
         const menuElement = document.getElementById("startupMenu");
@@ -207,25 +179,21 @@ const tableHeader = [
             currentCommand = command;
             currentRegistry = registry;
 
-            if (!name || !source || !path || !state || !command || !registry)
-                return;
+            if (!name || !source || !path || !state || !command || !registry) return;
 
             const startupName = document.getElementById("startupName");
             const toggleStartup = document.getElementById("toggleStartup");
 
             if (!startupName || !toggleStartup) return;
 
-            const truncatedName =
-                name.length > 24 ? `${name.substring(0, 24)}...` : name;
+            const truncatedName = name.length > 24 ? `${name.substring(0, 24)}...` : name;
             startupName.textContent = "Task: " + truncatedName;
             toggleStartup.textContent = state === "true" ? "Disable" : "Enable";
         };
 
         container?.addEventListener("contextmenu", handleMenuOpen);
         container?.addEventListener("dblclick", (event) => {
-            const row = (event.target as HTMLElement).closest(
-                "tr.startup-entry",
-            );
+            const row = (event.target as HTMLElement).closest("tr.startup-entry");
             if (row) {
                 handleMenuOpen(event);
             }
@@ -263,10 +231,7 @@ const tableHeader = [
         document
             .querySelector(".menu-item:has(#locatePath)")
             ?.addEventListener("click", async () => {
-                const args = [
-                    ...powershellArgs,
-                    `explorer.exe /select,"${currentPath}"`,
-                ];
+                const args = [...powershellArgs, `explorer.exe /select,"${currentPath}"`];
                 const shell = Command.create("powershell", args);
                 await shell.execute();
             });
@@ -296,9 +261,7 @@ const tableHeader = [
                 shell.spawn();
             });
 
-        const searchBar = document.getElementById(
-            "searchStartup",
-        ) as HTMLInputElement;
+        const searchBar = document.getElementById("searchStartup") as HTMLInputElement;
         searchBar?.addEventListener("input", () => {
             currentSearch = searchBar.value.toLowerCase().trim();
             const rows = document.querySelectorAll(

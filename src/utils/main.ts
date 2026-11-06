@@ -8,15 +8,12 @@ async function checkAndUpdate() {
         const update = await check();
         if (!update) return;
 
-        let updateAsk = await ask(
-            "An update is available. Do you want to update?",
-            {
-                title: "Update Available",
-                kind: "info",
-                okLabel: "Update",
-                cancelLabel: "Later",
-            },
-        );
+        let updateAsk = await ask("An update is available. Do you want to update?", {
+            title: "Update Available",
+            kind: "info",
+            okLabel: "Update",
+            cancelLabel: "Later",
+        });
 
         if (updateAsk === true) {
             await update.downloadAndInstall();

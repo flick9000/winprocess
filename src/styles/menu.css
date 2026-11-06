@@ -12,8 +12,8 @@
     }
 
     .menu img {
-        filter: invert(34%) sepia(0%) saturate(343%) hue-rotate(222deg)
-            brightness(27%) contrast(82%) !important;
+        filter: invert(34%) sepia(0%) saturate(343%) hue-rotate(222deg) brightness(27%)
+            contrast(82%) !important;
     }
 }
 
