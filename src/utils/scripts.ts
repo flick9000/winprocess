@@ -196,7 +196,7 @@ export const toggleStartupEntry = async (
 ) => {
     if (!name || !source || !command || !state) return;
 
-    if (source !== "Registry") {
+    if (source == "User Folder") {
         const baseDir = command.split("\\Programs\\")[0];
         const parentPath = baseDir + "\\Programs\\Startup";
         let disabledFolder = `${parentPath}\\WinProcessDisabled`;
@@ -241,41 +241,60 @@ export const toggleStartupEntry = async (
         }
     }
 
-    if (!registry) return;
+    if (source == "Registry" && registry) {
+        async function createDisabledKey(path: string) {
+            const args = [
+                ...powershellArgs,
+                `if (!(Test-Path "${path}")) { New-Item -Path "${formatRegistryPath(path)}\\WinProcessDisabled" -Force } `,
+            ];
+            const shell = Command.create("powershell", args);
+            await shell.execute();
+        }
 
-    async function createDisabledKey(path: string) {
-        const args = [
-            ...powershellArgs,
-            `if (!(Test-Path "${path}")) { New-Item -Path "${formatRegistryPath(path)}\\WinProcessDisabled" -Force } `,
-        ];
-        const shell = Command.create("powershell", args);
-        await shell.execute();
+        async function regAdd(path: string, item: string, command: string) {
+            const args = [
+                ...powershellArgs,
+                `New-ItemProperty -Path "${formatRegistryPath(path)}" -Name "${item}" -Value "${command}" -PropertyType "String" -Force`,
+            ];
+            const shell = Command.create("powershell", args);
+            await shell.execute();
+        }
+
+        if (state === "true") {
+            await createDisabledKey(registry);
+            await regDel(registry, name);
+            await regAdd(registry + "\\WinProcessDisabled", name, command);
+        }
+
+        if (registry.includes("WinProcessDisabled") && state === "false") {
+            const parentKey = formatRegistryPath(registry.replace("\\WinProcessDisabled", ""));
+            await regDel(registry, name);
+            await regAdd(parentKey, name, command);
+        }
+
+        if (registry.includes("AutorunsDisabled") && state === "false") {
+            await regDel(formatRegistryPath(registry), name);
+            await regAdd("HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", name, command);
+        }
     }
 
-    async function regAdd(path: string, item: string, command: string) {
-        const args = [
-            ...powershellArgs,
-            `New-ItemProperty -Path "${formatRegistryPath(path)}" -Name "${item}" -Value "${command}" -PropertyType "String" -Force`,
-        ];
-        const shell = Command.create("powershell", args);
-        await shell.execute();
-    }
-
-    if (state === "true") {
-        await createDisabledKey(registry);
-        await regDel(registry, name);
-        await regAdd(registry + "\\WinProcessDisabled", name, command);
-    }
-
-    if (registry.includes("WinProcessDisabled") && state === "false") {
-        const parentKey = formatRegistryPath(registry.replace("\\WinProcessDisabled", ""));
-        await regDel(registry, name);
-        await regAdd(parentKey, name, command);
-    }
-
-    if (registry.includes("AutorunsDisabled") && state === "false") {
-        await regDel(formatRegistryPath(registry), name);
-        await regAdd("HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", name, command);
+    if (source == "Service" && registry) {
+        const path = formatRegistryPath(registry);
+        if (state === "true") {
+            const args = [
+                ...powershellArgs,
+                `Set-ItemProperty -Path "${path}" -Name "Start" -Value 4 -Type DWord`,
+            ];
+            const shell = Command.create("powershell", args);
+            await shell.execute();
+        } else {
+            const args = [
+                ...powershellArgs,
+                `Set-ItemProperty -Path "${path}" -Name "Start" -Value 3 -Type DWord`,
+            ];
+            const shell = Command.create("powershell", args);
+            await shell.execute();
+        }
     }
 };
 
