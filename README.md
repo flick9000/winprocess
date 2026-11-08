@@ -6,7 +6,7 @@
 
 **Process management, system optimization, and task management in one lightweight Windows app.**
 
-WinProcess lets you monitor running processes, adjust CPU/GPU/I/O/memory priorities and CPU affinities, switch power plans automatically, configure persistent rules, manage startup applications, and handle scheduled tasks, all without jumping between different Windows tools.
+WinProcess lets you monitor running processes, adjust CPU/GPU/IO/memory priorities and CPU affinities, switch power plans automatically, configure persistent rules, manage startup applications, and handle scheduled tasks, all without jumping between different Windows tools.
 
 ![WinProcess main window showing the process list](./public/banner.png)
 
